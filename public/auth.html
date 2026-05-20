@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Authorizing...</title>
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(0,208,132,0.2);
+      border-top-color: #00d084;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    p { color: #8b949e; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>Completing authorization…</p>
+  <script>
+    // This page is opened by Trello's OAuth popup.
+    // TrelloPowerUp.authorize() resolves once this page calls authorize() back.
+    (function () {
+      var token = window.location.hash
+        .split('&')
+        .reduce(function (acc, pair) {
+          var parts = pair.replace(/^#/, '').split('=');
+          acc[parts[0]] = parts[1];
+          return acc;
+        }, {}).token;
+
+      if (token) {
+        // Hand the token back to the opener via the Power-Up SDK
+        window.opener && window.opener.postMessage(
+          JSON.stringify({ token: token }),
+          'https://trello.com'
+        );
+      }
+
+      // Also try the built-in Trello helper (works when loaded inside Trello iframe)
+      try {
+        var t = TrelloPowerUp.iframe();
+        t.authorize(token).then(function () {
+          window.close();
+        });
+      } catch (e) {
+        // Fallback: just close the popup; parent will read from storage
+        if (token) {
+          localStorage.setItem('trello_token', token);
+        }
+        window.close();
+      }
+    })();
+  </script>
+</body>
+</html>
