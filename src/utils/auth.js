@@ -17,7 +17,7 @@ export const TRELLO_AUTH_URL = (returnUrl) =>
   `&response_type=token` +
   `&key=${TRELLO_API_KEY}` +
   `&return_url=${encodeURIComponent(returnUrl || AUTH_CALLBACK_URL)}` +
-  `&callback_method=postMessage`;
+  `&callback_method=fragment`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Token helpers (stored in localStorage so they survive page reloads)
