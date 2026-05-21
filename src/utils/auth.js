@@ -54,11 +54,7 @@ export function authorizeWithTrello() {
     // Listen for the token posted back by auth.html
     const handler = (event) => {
       // Accept messages from Trello or our own origin
-      if (
-        event.origin !== "https://trello.com" &&
-        event.origin !== window.location.origin
-      )
-        return;
+      if (!event.data) return;
 
       try {
         const data =
