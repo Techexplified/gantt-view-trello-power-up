@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Gantt View – Connector</title>
+    <!-- The Trello Power-Up SDK MUST be loaded here because Trello loads
+       this file as a standalone iframe, not through your React app. -->
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  </head>
+  <body>
+    <script>
+      // ── Icon ────────────────────────────────────────────────────────────────────
+      // Must be a publicly accessible PNG/SVG, at least 24x24px.
+      // We use an inline SVG data-URI so there are zero external-icon load issues.
+      var ICON =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(
+          [
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+            '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>',
+            '<line x1="16" y1="2" x2="16" y2="6"/>',
+            '<line x1="8" y1="2" x2="8" y2="6"/>',
+            '<line x1="3" y1="10" x2="21" y2="10"/>',
+            '<line x1="7" y1="14" x2="13" y2="14"/>',
+            '<line x1="7" y1="18" x2="11" y2="18"/>',
+            "</svg>",
+          ].join(""),
+        );
+
+      var ICON_DARK =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(
+          [
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2300d084" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+            '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>',
+            '<line x1="16" y1="2" x2="16" y2="6"/>',
+            '<line x1="8" y1="2" x2="8" y2="6"/>',
+            '<line x1="3" y1="10" x2="21" y2="10"/>',
+            '<line x1="7" y1="14" x2="13" y2="14"/>',
+            '<line x1="7" y1="18" x2="11" y2="18"/>',
+            "</svg>",
+          ].join(""),
+        );
+
+      // ── The base URL of your deployed app ───────────────────────────────────────
+      var BASE_URL = window.location.origin;
+
+      // ── Initialize ──────────────────────────────────────────────────────────────
+      TrelloPowerUp.initialize(
+        {
+          // 1. Board button — appears in Trello's top navbar
+          "board-buttons": function (t) {
+            return [
+              {
+                icon: {
+                  dark: ICON_DARK, // shown on dark Trello backgrounds
+                  light: ICON, // shown on light Trello backgrounds
+                },
+                text: "Gantt View",
+                condition: "always",
+                callback: function (t) {
+                  return t.modal({
+                    title: "Gantt View",
+                    url: BASE_URL + "/index.html",
+                    fullscreen: true,
+                    accentColor: "#00d084",
+                  });
+                },
+              },
+            ];
+          },
+
+          // 2. Settings popup (gear icon in the Power-Up list)
+          "show-settings": function (t) {
+            return t.popup({
+              title: "Gantt View Settings",
+              url: BASE_URL + "/index.html?settings=1",
+              height: 120,
+            });
+          },
+        },
+        {
+          appKey: "e45a7c2350efb8ff28812397ba677b0c", // <-- replace with your real API key
+          appName: "Gantt View",
+        },
+      );
+    </script>
+  </body>
+</html>
