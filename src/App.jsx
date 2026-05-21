@@ -1,35 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import LoginScreen from './components/LoginScreen';
+import GanttDashboard from './components/GanttDashboard';
+import { getStoredToken, clearToken } from './utils/auth';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  // Check if user already has a token stored from a previous session
+  const [token, setToken] = useState(() => getStoredToken());
+  const [boardId, setBoardId] = useState(null);
+
+  // Try to read the boardId from the Trello Power-Up context (when opened via board-button)
+  useEffect(() => {
+    try {
+      // When running inside a Trello iframe, TrelloPowerUp is available globally
+      if (window.TrelloPowerUp) {
+        const t = window.TrelloPowerUp.iframe();
+        t.board('id').then((board) => {
+          if (board && board.id) setBoardId(board.id);
+        });
+      }
+    } catch (e) {
+      // Not inside a Trello iframe (e.g. dev mode) — boardId stays null
+      console.warn('Not running inside Trello iframe:', e.message);
+    }
+  }, []);
+
+  const handleAuth = (newToken) => {
+    setToken(newToken);
+  };
+
+  const handleLogout = () => {
+    clearToken();
+    setToken(null);
+  };
+
+  if (!token) {
+    return <LoginScreen onAuth={handleAuth} />;
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <GanttDashboard
+      initialBoardId={boardId}
+      onLogout={handleLogout}
+    />
+  );
 }
-
-export default App

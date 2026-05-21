@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { getBoard, getLists, getCards } from "../utils/trelloApi";
+import { useState, useEffect, useCallback } from 'react';
+import { getBoard, getLists, getCards } from '../utils/trelloApi';
 
 export function useBoardData(boardId) {
   const [board, setBoard] = useState(null);
@@ -28,9 +28,7 @@ export function useBoardData(boardId) {
     }
   }, [boardId]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   return { board, lists, cards, loading, error, refetch: fetchAll };
 }
