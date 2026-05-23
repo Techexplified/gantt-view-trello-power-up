@@ -111,7 +111,8 @@ function TrelloIcon() {
 
 const styles = {
   wrapper: {
-    minHeight: "100vh",
+    height: "100vh",
+    width: "100%",
     background: "#1a1f2e",
     display: "flex",
     alignItems: "center",
@@ -133,7 +134,7 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.08)",
     borderRadius: 20,
     padding: "48px 52px",
-    width: 440,
+    width: "100%",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",

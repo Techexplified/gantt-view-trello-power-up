@@ -63,18 +63,21 @@
         }
 
         // Also try the built-in Trello helper (works when loaded inside Trello iframe)
-        try {
-          var t = TrelloPowerUp.iframe();
-          t.authorize(token).then(function () {
-            window.close();
-          });
-        } catch (e) {
-          // Fallback: just close the popup; parent will read from storage
-          if (token) {
-            localStorage.setItem("trello_token", token);
-          }
+        // try {
+        //   var t = TrelloPowerUp.iframe();
+        //   t.authorize(token).then(function () {
+        //     window.close();
+        //   });
+        // } catch (e) {
+        //   // Fallback: just close the popup; parent will read from storage
+        //   if (token) {
+        //     localStorage.setItem("trello_token", token);
+        //   }
+        //   window.close();
+        // }
+        setTimeout(function () {
           window.close();
-        }
+        }, 300);
       })();
     </script>
   </body>
