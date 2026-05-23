@@ -7,8 +7,9 @@ import { useBoardData } from "../hooks/useBoardData";
 export default function GanttDashboard({ initialBoardId, onLogout }) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
   const [selectedCard, setSelectedCard] = useState(null);
-  const { board, lists, cards, loading, error } = useBoardData(activeBoardId);
+  const { board, lists, loading, error } = useBoardData(activeBoardId);
 
+  const cards = [];
   return (
     <div style={styles.layout}>
       {/* ── Left Sidebar ── */}
