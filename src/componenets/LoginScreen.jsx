@@ -111,14 +111,18 @@ function TrelloIcon() {
 
 const styles = {
   wrapper: {
+    width: "100vw",
     height: "100vh",
-    width: "100%",
     background: "#1a1f2e",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontFamily: "'Segoe UI', system-ui, sans-serif",
-    position: "relative",
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     overflow: "hidden",
   },
   gridBg: {
@@ -134,7 +138,8 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.08)",
     borderRadius: 20,
     padding: "48px 52px",
-    width: "100%",
+    width: "calc(100% - 48px)",
+    maxWidth: "100%",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
