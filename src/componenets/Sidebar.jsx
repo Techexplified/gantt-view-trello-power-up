@@ -69,7 +69,7 @@ export default function Sidebar({
                           ? styles.boardItemActive
                           : {}),
                       }}
-                      // onClick={() => onSelectBoard(b.id)}
+                      onClick={() => onSelectBoard(b.id)}
                     >
                       <span
                         style={{
