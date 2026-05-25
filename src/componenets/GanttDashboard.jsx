@@ -7,9 +7,8 @@ import { useBoardData } from "../hooks/useBoardData";
 export default function GanttDashboard({ initialBoardId, onLogout }) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
   const [selectedCard, setSelectedCard] = useState(null);
-  const { board, lists, loading, error } = useBoardData(activeBoardId);
+  const { board, lists, cards, loading, error } = useBoardData(activeBoardId);
 
-  const cards = [];
   return (
     <div style={styles.layout}>
       {/* ── Left Sidebar ── */}
@@ -30,7 +29,7 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
           <ErrorState message={error} />
         ) : (
           <CalendarView
-            cards={cards}
+            cards={[]}
             lists={lists}
             onCardClick={setSelectedCard}
           />
