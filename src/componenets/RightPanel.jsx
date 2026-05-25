@@ -70,24 +70,24 @@ function CardTile({ card, onClick }) {
   return (
     <div style={styles.card} onClick={onClick}>
       {/* Labels */}
-      {/* {card.labels && card.labels.length > 0 && (
+      {card.labels && card.labels.length > 0 && (
         <div style={styles.labels}>
           {card.labels.map((lbl, i) => (
             <span
               key={i}
               style={{
                 ...styles.label,
-                background: LABEL_COLORS[lbl.color] || '#666',
+                background: LABEL_COLORS[lbl.color] || "#666",
               }}
               title={lbl.name}
             />
           ))}
         </div>
-      )} */}
+      )}
 
       <span style={styles.cardName}>{card.name}</span>
 
-      {/* {hasDue && (
+      {hasDue && (
         <span
           style={{
             ...styles.dueChip,
@@ -100,7 +100,7 @@ function CardTile({ card, onClick }) {
         >
           🕐 {formatDate(dueDate)}
         </span>
-      )} */}
+      )}
     </div>
   );
 }
