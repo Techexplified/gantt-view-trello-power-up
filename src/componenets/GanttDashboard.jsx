@@ -42,13 +42,13 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
       )}
 
       {/* ── Card Detail Modal ── */}
-      {/* {selectedCard && (
+      {selectedCard && (
         <CardModal
           card={selectedCard}
           lists={lists}
           onClose={() => setSelectedCard(null)}
         />
-      )} */}
+      )}
     </div>
   );
 }
