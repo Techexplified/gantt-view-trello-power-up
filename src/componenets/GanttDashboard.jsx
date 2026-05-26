@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import CalendarView from "./CalendarView";
 import RightPanel from "./RightPanel";
+import CardModal from "./CardModal";
 import { useBoardData } from "../hooks/useBoardData";
 
 export default function GanttDashboard({ initialBoardId, onLogout }) {
@@ -86,67 +87,6 @@ function ErrorState({ message }) {
       <div style={styles.errorIcon}>⚠️</div>
       <h2 style={styles.emptyTitle}>Something went wrong</h2>
       <p style={styles.errorText}>{message}</p>
-    </div>
-  );
-}
-
-function CardModal({ card, lists, onClose }) {
-  const list = lists.find((l) => l.id === card.idList);
-  const due = card.due
-    ? new Date(card.due).toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-  const start = card.start
-    ? new Date(card.start).toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-
-  return (
-    <div style={styles.modalOverlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.modalHeader}>
-          <h3 style={styles.modalTitle}>{card.name}</h3>
-          <button style={styles.closeBtn} onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div style={styles.modalBody}>
-          <Row label="List" value={list?.name || "—"} />
-          {start && <Row label="Start date" value={start} />}
-          {due && <Row label="Due date" value={due} />}
-          {card.labels?.length > 0 && (
-            <div style={styles.row}>
-              <span style={styles.rowLabel}>Labels</span>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {card.labels.map((lbl, i) => (
-                  <span
-                    key={i}
-                    style={{ ...styles.labelChip, background: lbl.color }}
-                  >
-                    {lbl.name || lbl.color}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={styles.modalFooter}>
-          <a
-            href={card.url}
-            target="_blank"
-            rel="noreferrer"
-            style={styles.openBtn}
-          >
-            Open in Trello ↗
-          </a>
-        </div>
-      </div>
     </div>
   );
 }
