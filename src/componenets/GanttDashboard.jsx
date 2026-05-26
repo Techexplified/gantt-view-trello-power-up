@@ -29,7 +29,7 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
           <ErrorState message={error} />
         ) : (
           <CalendarView
-            cards={[]}
+            cards={cards}
             lists={lists}
             onCardClick={setSelectedCard}
           />
