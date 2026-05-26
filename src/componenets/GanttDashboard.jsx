@@ -7,7 +7,8 @@ import { useBoardData } from "../hooks/useBoardData";
 export default function GanttDashboard({ initialBoardId, onLogout }) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
   const [selectedCard, setSelectedCard] = useState(null);
-  const { board, lists, cards, loading, error } = useBoardData(activeBoardId);
+  const { board, lists, cards, loading, error, refetch } =
+    useBoardData(activeBoardId);
 
   return (
     <div style={styles.layout}>
@@ -45,8 +46,13 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
       {selectedCard && (
         <CardModal
           card={selectedCard}
+          boardId={activeBoardId}
           lists={lists}
           onClose={() => setSelectedCard(null)}
+          onCardUpdated={() => {
+            setSelectedCard(null);
+            refetch();
+          }}
         />
       )}
     </div>
