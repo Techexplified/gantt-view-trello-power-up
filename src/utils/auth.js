@@ -13,7 +13,7 @@ export const TRELLO_AUTH_URL = (returnUrl) =>
   `https://trello.com/1/authorize?` +
   `expiration=never` +
   `&name=Gantt+View` +
-  `&scope=read` +
+  `&scope=read,write` +
   `&response_type=token` +
   `&key=${TRELLO_API_KEY}` +
   `&return_url=${encodeURIComponent(returnUrl || AUTH_CALLBACK_URL)}` +
