@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import CalendarView from "./CalendarView";
 import RightPanel from "./RightPanel";
@@ -8,8 +8,19 @@ import { useBoardData } from "../hooks/useBoardData";
 export default function GanttDashboard({ initialBoardId, onLogout }) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
   const [selectedCard, setSelectedCard] = useState(null);
-  const { board, lists, cards, loading, error, refetch } =
-    useBoardData(activeBoardId);
+  const {
+    board,
+    lists,
+    cards: fetchedCards,
+    loading,
+    error,
+    refetch,
+  } = useBoardData(activeBoardId);
+  const [cards, setCards] = useState([]);
+
+  useEffect(() => {
+    setCards(fetchedCards);
+  }, [fetchedCards]);
 
   return (
     <div style={styles.layout}>
@@ -34,6 +45,11 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             cards={cards}
             lists={lists}
             onCardClick={setSelectedCard}
+            onCardUpdated={(cardId, newDue) => {
+              setCards((prev) =>
+                prev.map((c) => (c.id === cardId ? { ...c, due: newDue } : c)),
+              );
+            }}
           />
         )}
       </main>
