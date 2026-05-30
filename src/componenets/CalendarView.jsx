@@ -155,8 +155,11 @@ export default function CalendarView({
 
   const handleCellDrop = useCallback(
     async (e, day) => {
+      console.log("handleCellDrop line 1 🐳");
       e.preventDefault();
+      console.log("handleCellDrop line 2 🐳");
       if (!dragging) return;
+      console.log("handleCellDrop line 3 🐳");
       const snapped = new Date(day);
       snapped.setHours(23, 59, 0, 0);
       const card = dragging.card;
@@ -166,14 +169,19 @@ export default function CalendarView({
         setDragWeekIdx(null);
         return;
       }
+      console.log("handleCellDrop line 4 🐳");
       const cardId = dragging.cardId;
       setDragging(null);
       setDragCol(null);
       setDragWeekIdx(null);
       try {
+        console.log("handleCellDrop line 5 🐳");
         await updateCard(cardId, { due: snapped.toISOString() });
+        console.log("handleCellDrop line 6 🐳");
         onCardUpdated && onCardUpdated(cardId, snapped.toISOString());
+        console.log("handleCellDrop line 7 🐳");
       } catch (err) {
+        console.log("handleCellDrop line 8 🐳");
         console.error("Failed to update due date:", err);
       }
     },
