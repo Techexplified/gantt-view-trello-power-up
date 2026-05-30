@@ -246,7 +246,10 @@ export default function CalendarView({
                       height: cellH,
                     }}
                     onDragOver={(e) => handleCellDragOver(e, weekIdx, colIdx)}
-                    onDrop={(e) => handleCellDrop(e, day)}
+                    onDrop={(e) => {
+                      console.log("handleCellDrop 🐳");
+                      handleCellDrop(e, day);
+                    }}
                   >
                     <div style={{ ...s.dateNum, ...(today ? s.todayNum : {}) }}>
                       {format(day, "d")}
