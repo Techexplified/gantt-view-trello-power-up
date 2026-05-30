@@ -17,12 +17,11 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
     refetch,
   } = useBoardData(activeBoardId);
 
-  // Tracks optimistic due-date updates made by dragging, keyed by card id.
-  // These override fetchedCards until Trello confirms via the next refetch.
+  // Optimistic due-date overrides keyed by card id.
+  // Survives fetchedCards re-renders until the next explicit refetch.
   const [pendingUpdates, setPendingUpdates] = useState({});
 
-  // Merge fetchedCards with any pending optimistic updates.
-  // When the board changes we also clear stale pending updates.
+  // Clear pending updates when the active board changes
   const prevBoardIdRef = useRef(activeBoardId);
   useEffect(() => {
     if (activeBoardId !== prevBoardIdRef.current) {
@@ -31,7 +30,7 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
     }
   }, [activeBoardId]);
 
-  console.log("fetchedCards", fetchedCards, "pendingUpdates", pendingUpdates);
+  // Merge server cards with any optimistic overrides
   const cards = fetchedCards.map((c) =>
     pendingUpdates[c.id] ? { ...c, due: pendingUpdates[c.id] } : c,
   );
@@ -60,7 +59,7 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             lists={lists}
             onCardClick={setSelectedCard}
             onCardUpdated={(cardId, newDue) => {
-              // Apply optimistic update immediately so the card doesn't snap back.
+              // Write optimistic update; does not trigger a refetch
               setPendingUpdates((prev) => ({ ...prev, [cardId]: newDue }));
             }}
           />
@@ -81,8 +80,6 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
           onClose={() => setSelectedCard(null)}
           onCardUpdated={() => {
             setSelectedCard(null);
-            // After a modal save, refetch from Trello and clear pending updates
-            // so fresh server data takes over.
             setPendingUpdates({});
             refetch();
           }}
@@ -119,15 +116,6 @@ function ErrorState({ message }) {
       <div style={styles.errorIcon}>⚠️</div>
       <h2 style={styles.emptyTitle}>Something went wrong</h2>
       <p style={styles.errorText}>{message}</p>
-    </div>
-  );
-}
-
-function Row({ label, value }) {
-  return (
-    <div style={styles.row}>
-      <span style={styles.rowLabel}>{label}</span>
-      <span style={styles.rowValue}>{value}</span>
     </div>
   );
 }
@@ -181,7 +169,6 @@ const styles = {
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
-  // Modal
   modalOverlay: {
     position: "fixed",
     inset: 0,

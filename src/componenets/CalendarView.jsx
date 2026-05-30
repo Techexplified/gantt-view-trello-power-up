@@ -18,10 +18,10 @@ import {
 import { updateCard } from "../utils/trelloApi";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const ROW_HEIGHT = 28; // px per card row inside a week
-const CELL_MIN_H = 110; // min cell height
-const CARD_GAP = 4; // px between card rows
-const CARD_TOP_OFFSET = 32; // space for date number
+const ROW_HEIGHT = 28;
+const CELL_MIN_H = 110;
+const CARD_GAP = 4;
+const CARD_TOP_OFFSET = 32;
 
 const CARD_COLORS = [
   "#0079bf",
@@ -50,7 +50,6 @@ function getCalendarWeeks(date) {
   return weeks;
 }
 
-// For each card, return the clamped start/end within a week row
 function cardWeekSpan(card, weekDays) {
   const weekStart = weekDays[0];
   const weekEnd = weekDays[6];
@@ -63,14 +62,13 @@ function cardWeekSpan(card, weekDays) {
   const cardEnd = card.due ? parseISO(card.due) : cardStart;
   if (!cardStart || !cardEnd) return null;
 
-  // Does card overlap this week?
   if (cardEnd < weekStart || cardStart > weekEnd) return null;
 
   const clampedStart = max([cardStart, weekStart]);
   const clampedEnd = min([cardEnd, weekEnd]);
 
-  const colStart = differenceInCalendarDays(clampedStart, weekStart); // 0-6
-  const colEnd = differenceInCalendarDays(clampedEnd, weekStart); // 0-6
+  const colStart = differenceInCalendarDays(clampedStart, weekStart);
+  const colEnd = differenceInCalendarDays(clampedEnd, weekStart);
 
   const isFirstWeek = cardStart >= weekStart && cardStart <= weekEnd;
   const isLastWeek = cardEnd >= weekStart && cardEnd <= weekEnd;
@@ -78,7 +76,6 @@ function cardWeekSpan(card, weekDays) {
   return { colStart, colEnd, isFirstWeek, isLastWeek };
 }
 
-// Layout cards into rows so overlapping cards don't collide
 function layoutCards(cards, weekDays, lists) {
   const spans = cards
     .map((card) => {
@@ -88,14 +85,11 @@ function layoutCards(cards, weekDays, lists) {
     })
     .filter(Boolean);
 
-  // Greedy row assignment
-  const rows = []; // rows[i] = array of {colStart, colEnd} for occupied slots
+  const rows = [];
   const assignments = spans.map((item) => {
     let row = 0;
     while (true) {
-      if (!rows[row]) {
-        rows[row] = [];
-      }
+      if (!rows[row]) rows[row] = [];
       const conflict = rows[row].some(
         (slot) => !(item.colEnd < slot.colStart || item.colStart > slot.colEnd),
       );
@@ -119,19 +113,16 @@ export default function CalendarView({
   const [currentDate, setCurrentDate] = useState(new Date());
   const weeks = getCalendarWeeks(currentDate);
 
-  // Drag state
   const [dragging, setDragging] = useState(null);
-  // dragging = { cardId, originalDue, colStart }
-  const [dragCol, setDragCol] = useState(null); // current column being hovered (0-6)
+  const [dragCol, setDragCol] = useState(null);
   const [dragWeekIdx, setDragWeekIdx] = useState(null);
-  const gridRef = useRef(null);
   const draggingStarted = useRef(false);
+  const gridRef = useRef(null);
 
   const prevMonth = () => setCurrentDate((d) => subMonths(d, 1));
   const nextMonth = () => setCurrentDate((d) => addMonths(d, 1));
   const goToday = () => setCurrentDate(new Date());
 
-  // ── Drag handlers ──────────────────────────────────────────────────────────
   const handleResizeDragStart = useCallback((e, card, weekIdx) => {
     e.stopPropagation();
     setDragging({ cardId: card.id, originalDue: card.due, card });
@@ -142,7 +133,7 @@ export default function CalendarView({
     e.dataTransfer.setDragImage(ghost, 0, 0);
     setTimeout(() => {
       document.body.removeChild(ghost);
-      draggingStarted.current = true; // ← ADD THIS
+      draggingStarted.current = true;
     }, 0);
   }, []);
 
@@ -158,11 +149,8 @@ export default function CalendarView({
 
   const handleCellDrop = useCallback(
     async (e, day) => {
-      console.log("handleCellDrop line 1 🐳");
       e.preventDefault();
-      console.log("handleCellDrop line 2 🐳");
       if (!dragging) return;
-      console.log("handleCellDrop line 3 🐳");
       const snapped = new Date(day);
       snapped.setHours(23, 59, 0, 0);
       const card = dragging.card;
@@ -170,21 +158,23 @@ export default function CalendarView({
         setDragging(null);
         setDragCol(null);
         setDragWeekIdx(null);
+        draggingStarted.current = false;
         return;
       }
-      console.log("handleCellDrop line 4 🐳");
       const cardId = dragging.cardId;
+      const newDue = snapped.toISOString();
+
+      // Optimistically update BEFORE clearing drag state and BEFORE await
+      onCardUpdated && onCardUpdated(cardId, newDue);
+
       setDragging(null);
       setDragCol(null);
       setDragWeekIdx(null);
+      draggingStarted.current = false;
+
       try {
-        console.log("handleCellDrop line 5 🐳");
-        await updateCard(cardId, { due: snapped.toISOString() });
-        console.log("handleCellDrop line 6 🐳");
-        onCardUpdated && onCardUpdated(cardId, snapped.toISOString());
-        console.log("handleCellDrop line 7 🐳");
+        await updateCard(cardId, { due: newDue });
       } catch (err) {
-        console.log("handleCellDrop line 8 🐳");
         console.error("Failed to update due date:", err);
       }
     },
@@ -192,13 +182,12 @@ export default function CalendarView({
   );
 
   const handleDragEnd = useCallback(() => {
-    draggingStarted.current = false; // ← ADD THIS
+    draggingStarted.current = false;
     setDragging(null);
     setDragCol(null);
     setDragWeekIdx(null);
   }, []);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={s.wrapper}>
       {/* Toolbar */}
@@ -240,7 +229,7 @@ export default function CalendarView({
 
           return (
             <div key={weekIdx} style={{ ...s.weekRow, height: cellH }}>
-              {/* Day cells (background + date numbers + drop targets) */}
+              {/* Day cells — drop targets */}
               {weekDays.map((day, colIdx) => {
                 const key = format(day, "yyyy-MM-dd");
                 const inMonth = isSameMonth(day, currentDate);
@@ -258,10 +247,7 @@ export default function CalendarView({
                       height: cellH,
                     }}
                     onDragOver={(e) => handleCellDragOver(e, weekIdx, colIdx)}
-                    onDrop={(e) => {
-                      console.log("handleCellDrop 🐳");
-                      handleCellDrop(e, day);
-                    }}
+                    onDrop={(e) => handleCellDrop(e, day)}
                   >
                     <div style={{ ...s.dateNum, ...(today ? s.todayNum : {}) }}>
                       {format(day, "d")}
@@ -270,7 +256,7 @@ export default function CalendarView({
                 );
               })}
 
-              {/* Card bars — absolutely positioned across columns */}
+              {/* Card bars */}
               {laid.map(
                 ({
                   card,
@@ -282,7 +268,7 @@ export default function CalendarView({
                   color,
                 }) => {
                   const isDraggingThis = dragging?.cardId === card.id;
-                  // If dragging, preview new colEnd
+
                   let previewColEnd = colEnd;
                   if (
                     isDraggingThis &&
@@ -313,6 +299,7 @@ export default function CalendarView({
                         borderRadius: `${isFirstWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isFirstWeek ? "5px" : "0"}`,
                         opacity: isDraggingThis ? 0.6 : 1,
                         transition: isDraggingThis ? "none" : "opacity 0.15s",
+                        // Only block pointer events on non-dragged bars AFTER drag has started
                         pointerEvents:
                           dragging && draggingStarted.current && !isDraggingThis
                             ? "none"
@@ -326,7 +313,6 @@ export default function CalendarView({
                     >
                       <span style={s.barText}>{card.name}</span>
 
-                      {/* Resize handle — only on last week segment, last col of bar */}
                       {isLastWeek && (
                         <div
                           draggable
@@ -346,7 +332,7 @@ export default function CalendarView({
                 },
               )}
 
-              {/* "+N more" overflow indicator per day */}
+              {/* +N more overflow */}
               {weekDays.map((day, colIdx) => {
                 const key = format(day, "yyyy-MM-dd");
                 const visibleRows = Math.floor(
@@ -458,7 +444,7 @@ const s = {
   weekRow: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    position: "relative", // so bars can be absolutely positioned
+    position: "relative",
     borderBottom: "1px solid rgba(255,255,255,0.05)",
   },
   cell: {
@@ -484,13 +470,12 @@ const s = {
     fontWeight: 500,
   },
   todayNum: { background: "#00d084", color: "#0d1117", fontWeight: 700 },
-  // Card bar
   bar: {
     position: "absolute",
     display: "flex",
     alignItems: "center",
     paddingLeft: 6,
-    paddingRight: 20, // leave room for resize handle
+    paddingRight: 20,
     cursor: "pointer",
     overflow: "hidden",
     userSelect: "none",
