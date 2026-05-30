@@ -31,6 +31,7 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
     }
   }, [activeBoardId]);
 
+  console.log("fetchedCards", fetchedCards, "pendingUpdates", pendingUpdates);
   const cards = fetchedCards.map((c) =>
     pendingUpdates[c.id] ? { ...c, due: pendingUpdates[c.id] } : c,
   );
