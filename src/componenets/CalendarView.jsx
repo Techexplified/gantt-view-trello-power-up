@@ -309,6 +309,7 @@ export default function CalendarView({
                         borderRadius: `${isFirstWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isFirstWeek ? "5px" : "0"}`,
                         opacity: isDraggingThis ? 0.6 : 1,
                         transition: isDraggingThis ? "none" : "opacity 0.15s",
+                        pointerEvents: dragging ? "none" : "auto", // ← ADD THIS LINE
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
