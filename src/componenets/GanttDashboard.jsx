@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import CalendarView from "./CalendarView";
 import RightPanel from "./RightPanel";
@@ -16,24 +16,11 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
     error,
     refetch,
   } = useBoardData(activeBoardId);
+  const [cards, setCards] = useState([]);
 
-  // Optimistic due-date overrides keyed by card id.
-  // Survives fetchedCards re-renders until the next explicit refetch.
-  const [pendingUpdates, setPendingUpdates] = useState({});
-
-  // Clear pending updates when the active board changes
-  const prevBoardIdRef = useRef(activeBoardId);
   useEffect(() => {
-    if (activeBoardId !== prevBoardIdRef.current) {
-      prevBoardIdRef.current = activeBoardId;
-      setPendingUpdates({});
-    }
-  }, [activeBoardId]);
-
-  // Merge server cards with any optimistic overrides
-  const cards = fetchedCards.map((c) =>
-    pendingUpdates[c.id] ? { ...c, due: pendingUpdates[c.id] } : c,
-  );
+    setCards(fetchedCards);
+  }, [fetchedCards]);
 
   return (
     <div style={styles.layout}>
@@ -59,8 +46,9 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             lists={lists}
             onCardClick={setSelectedCard}
             onCardUpdated={(cardId, newDue) => {
-              // Write optimistic update; does not trigger a refetch
-              setPendingUpdates((prev) => ({ ...prev, [cardId]: newDue }));
+              setCards((prev) =>
+                prev.map((c) => (c.id === cardId ? { ...c, due: newDue } : c)),
+              );
             }}
           />
         )}
@@ -80,7 +68,6 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
           onClose={() => setSelectedCard(null)}
           onCardUpdated={() => {
             setSelectedCard(null);
-            setPendingUpdates({});
             refetch();
           }}
         />
@@ -116,6 +103,15 @@ function ErrorState({ message }) {
       <div style={styles.errorIcon}>⚠️</div>
       <h2 style={styles.emptyTitle}>Something went wrong</h2>
       <p style={styles.errorText}>{message}</p>
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={styles.row}>
+      <span style={styles.rowLabel}>{label}</span>
+      <span style={styles.rowValue}>{value}</span>
     </div>
   );
 }
@@ -169,6 +165,7 @@ const styles = {
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
+  // Modal
   modalOverlay: {
     position: "fixed",
     inset: 0,

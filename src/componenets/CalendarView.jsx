@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useRef, useState } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -6,22 +6,53 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
+  isSameDay,
   isToday,
   format,
   addMonths,
   subMonths,
   parseISO,
-  differenceInCalendarDays,
-  max,
-  min,
 } from "date-fns";
 import { updateCard } from "../utils/trelloApi";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const ROW_HEIGHT = 28;
-const CELL_MIN_H = 110;
-const CARD_GAP = 4;
-const CARD_TOP_OFFSET = 32;
+
+// Returns all calendar cells (including leading/trailing days to fill weeks)
+function getCalendarDays(date) {
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
+  const start = startOfWeek(monthStart);
+  const end = endOfWeek(monthEnd);
+  return eachDayOfInterval({ start, end });
+}
+
+// Given a card, return the date(s) it spans
+function cardDates(card) {
+  const start = card.start ? parseISO(card.start) : null;
+  const due = card.due ? parseISO(card.due) : null;
+  return { start, due };
+}
+
+// Check if a card falls on (or spans through) a given calendar day
+function cardOnDay(card, day) {
+  const { start, due } = cardDates(card);
+  if (!start && !due) return false;
+  if (start && due) {
+    // spans a range
+    return day >= start && day <= due;
+  }
+  if (due) return isSameDay(day, due);
+  if (start) return isSameDay(day, start);
+  return false;
+}
+
+// Determine if this day is the first day the card appears in the current view
+function isCardStart(card, day) {
+  const { start, due } = cardDates(card);
+  if (start) return isSameDay(day, start);
+  if (due) return isSameDay(day, due);
+  return false;
+}
 
 const CARD_COLORS = [
   "#0079bf",
@@ -34,74 +65,10 @@ const CARD_COLORS = [
   "#61bd4f",
 ];
 
+// Stable color per list id
 function listColor(listId, lists) {
   const idx = lists.findIndex((l) => l.id === listId);
   return CARD_COLORS[idx % CARD_COLORS.length] || "#8b949e";
-}
-
-function getCalendarWeeks(date) {
-  const monthStart = startOfMonth(date);
-  const monthEnd = endOfMonth(date);
-  const start = startOfWeek(monthStart);
-  const end = endOfWeek(monthEnd);
-  const days = eachDayOfInterval({ start, end });
-  const weeks = [];
-  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
-  return weeks;
-}
-
-function cardWeekSpan(card, weekDays) {
-  const weekStart = weekDays[0];
-  const weekEnd = weekDays[6];
-
-  const cardStart = card.start
-    ? parseISO(card.start)
-    : card.due
-      ? parseISO(card.due)
-      : null;
-  const cardEnd = card.due ? parseISO(card.due) : cardStart;
-  if (!cardStart || !cardEnd) return null;
-
-  if (cardEnd < weekStart || cardStart > weekEnd) return null;
-
-  const clampedStart = max([cardStart, weekStart]);
-  const clampedEnd = min([cardEnd, weekEnd]);
-
-  const colStart = differenceInCalendarDays(clampedStart, weekStart);
-  const colEnd = differenceInCalendarDays(clampedEnd, weekStart);
-
-  const isFirstWeek = cardStart >= weekStart && cardStart <= weekEnd;
-  const isLastWeek = cardEnd >= weekStart && cardEnd <= weekEnd;
-
-  return { colStart, colEnd, isFirstWeek, isLastWeek };
-}
-
-function layoutCards(cards, weekDays, lists) {
-  const spans = cards
-    .map((card) => {
-      const span = cardWeekSpan(card, weekDays);
-      if (!span) return null;
-      return { card, ...span, color: listColor(card.idList, lists) };
-    })
-    .filter(Boolean);
-
-  const rows = [];
-  const assignments = spans.map((item) => {
-    let row = 0;
-    while (true) {
-      if (!rows[row]) rows[row] = [];
-      const conflict = rows[row].some(
-        (slot) => !(item.colEnd < slot.colStart || item.colStart > slot.colEnd),
-      );
-      if (!conflict) {
-        rows[row].push({ colStart: item.colStart, colEnd: item.colEnd });
-        return { ...item, row };
-      }
-      row++;
-    }
-  });
-
-  return assignments;
 }
 
 export default function CalendarView({
@@ -111,199 +78,149 @@ export default function CalendarView({
   onCardUpdated,
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const weeks = getCalendarWeeks(currentDate);
-
+  const days = getCalendarDays(currentDate);
   const [dragging, setDragging] = useState(null);
-  const [dragCol, setDragCol] = useState(null);
-  const [dragWeekIdx, setDragWeekIdx] = useState(null);
-  const draggingStarted = useRef(false);
-  const gridRef = useRef(null);
+  // dragging = { cardId, originalDue, currentDue }
+  const [dragOverDay, setDragOverDay] = useState(null);
+  const cellRefs = useRef({});
 
-  const prevMonth = () => setCurrentDate((d) => subMonths(d, 1));
-  const nextMonth = () => setCurrentDate((d) => addMonths(d, 1));
-  const goToday = () => setCurrentDate(new Date());
-
-  const handleResizeDragStart = useCallback((e, card, weekIdx) => {
+  const handleResizeDragStart = (e, card) => {
     e.stopPropagation();
-    setDragging({ cardId: card.id, originalDue: card.due, card });
-    setDragWeekIdx(weekIdx);
+    setDragging({
+      cardId: card.id,
+      originalDue: card.due,
+      currentDue: card.due,
+    });
+    // Ghost image: invisible
     const ghost = document.createElement("div");
-    ghost.style.cssText = "position:fixed;top:-999px;opacity:0;";
+    ghost.style.cssText = "position:fixed;top:-999px;";
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 0, 0);
-    setTimeout(() => {
-      document.body.removeChild(ghost);
-      draggingStarted.current = true;
-    }, 0);
-  }, []);
+    setTimeout(() => document.body.removeChild(ghost), 0);
+  };
 
-  const handleCellDragOver = useCallback(
-    (e, weekIdx, colIdx) => {
-      e.preventDefault();
-      if (!dragging) return;
-      setDragWeekIdx(weekIdx);
-      setDragCol(colIdx);
-    },
-    [dragging],
-  );
+  const handleDayDragOver = (e, day) => {
+    e.preventDefault();
+    if (!dragging) return;
+    const key = format(day, "yyyy-MM-dd");
+    if (dragOverDay !== key) setDragOverDay(key);
+  };
 
-  const handleCellDrop = useCallback(
-    async (e, day) => {
-      e.preventDefault();
-      if (!dragging) return;
-      const snapped = new Date(day);
-      snapped.setHours(23, 59, 0, 0);
-      const card = dragging.card;
-      if (card?.start && snapped < new Date(card.start)) {
-        setDragging(null);
-        setDragCol(null);
-        setDragWeekIdx(null);
-        draggingStarted.current = false;
-        return;
-      }
-      const cardId = dragging.cardId;
-      const newDue = snapped.toISOString();
-
-      // Optimistically update BEFORE clearing drag state and BEFORE await
-      onCardUpdated && onCardUpdated(cardId, newDue);
-
+  const handleDayDrop = async (e, day) => {
+    e.preventDefault();
+    if (!dragging) return;
+    // Snap to end of the dropped day
+    const snapped = new Date(day);
+    snapped.setHours(23, 59, 0, 0);
+    // Don't allow due before start
+    const card = cards.find((c) => c.id === dragging.cardId);
+    if (card?.start && snapped < new Date(card.start)) {
       setDragging(null);
-      setDragCol(null);
-      setDragWeekIdx(null);
-      draggingStarted.current = false;
-
-      try {
-        await updateCard(cardId, { due: newDue });
-      } catch (err) {
-        console.error("Failed to update due date:", err);
-      }
-    },
-    [dragging, onCardUpdated],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    draggingStarted.current = false;
+      setDragOverDay(null);
+      return;
+    }
     setDragging(null);
-    setDragCol(null);
-    setDragWeekIdx(null);
-  }, []);
+    setDragOverDay(null);
+    try {
+      await updateCard(dragging.cardId, { due: snapped.toISOString() });
+      onCardUpdated && onCardUpdated(dragging.cardId, snapped.toISOString());
+    } catch (e) {
+      console.error("Failed to update due date:", e);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragging(null);
+    setDragOverDay(null);
+  };
+
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const goToday = () => setCurrentDate(new Date());
+
+  // Map: day-string -> cards visible on that day
+  const dayCardMap = {};
+  days.forEach((day) => {
+    const key = format(day, "yyyy-MM-dd");
+    dayCardMap[key] = cards.filter((c) => cardOnDay(c, day));
+  });
 
   return (
-    <div style={s.wrapper}>
-      {/* Toolbar */}
-      <div style={s.toolbar}>
-        <div style={s.toolbarLeft}>
-          <button style={s.navBtn} onClick={prevMonth}>
+    <div style={styles.wrapper}>
+      {/* ── Toolbar ── */}
+      <div style={styles.toolbar}>
+        <div style={styles.toolbarLeft}>
+          <button style={styles.navBtn} onClick={prevMonth}>
             ‹
           </button>
-          <button style={s.todayBtn} onClick={goToday}>
+          <button style={styles.todayBtn} onClick={goToday}>
             Today
           </button>
-          <button style={s.navBtn} onClick={nextMonth}>
+          <button style={styles.navBtn} onClick={nextMonth}>
             ›
           </button>
-          <span style={s.monthLabel}>{format(currentDate, "MMMM yyyy")}</span>
+          <span style={styles.monthLabel}>
+            {format(currentDate, "MMMM yyyy")}
+          </span>
         </div>
-        <span style={s.viewLabel}>Month</span>
+        <div style={styles.toolbarRight}>
+          <span style={styles.viewLabel}>Month</span>
+        </div>
       </div>
 
-      {/* Day headers */}
-      <div style={s.dayHeaders}>
+      {/* ── Day-of-week headers ── */}
+      <div style={styles.dayHeaders}>
         {DAY_HEADERS.map((d) => (
-          <div key={d} style={s.dayHeader}>
+          <div key={d} style={styles.dayHeader}>
             {d}
           </div>
         ))}
       </div>
 
-      {/* Week rows */}
-      <div ref={gridRef} style={s.grid}>
-        {weeks.map((weekDays, weekIdx) => {
-          const laid = layoutCards(cards, weekDays, lists);
-          const maxRow = laid.length ? Math.max(...laid.map((l) => l.row)) : -1;
-          const rowsNeeded = maxRow + 1;
-          const cellH = Math.max(
-            CELL_MIN_H,
-            CARD_TOP_OFFSET + rowsNeeded * (ROW_HEIGHT + CARD_GAP) + 8,
-          );
+      {/* ── Calendar grid ── */}
+      <div style={styles.grid}>
+        {days.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          const dayCards = dayCardMap[key] || [];
+          const inMonth = isSameMonth(day, currentDate);
+          const todayDay = isToday(day);
 
           return (
-            <div key={weekIdx} style={{ ...s.weekRow, height: cellH }}>
-              {/* Day cells — drop targets */}
-              {weekDays.map((day, colIdx) => {
-                const key = format(day, "yyyy-MM-dd");
-                const inMonth = isSameMonth(day, currentDate);
-                const today = isToday(day);
-                const isDragTarget =
-                  dragging && dragWeekIdx === weekIdx && dragCol === colIdx;
+            <div
+              key={key}
+              style={{
+                ...styles.cell,
+                ...(inMonth ? {} : styles.cellOut),
+                ...(dragOverDay === key && dragging ? styles.cellDragOver : {}),
+              }}
+              onDragOver={(e) => handleDayDragOver(e, day)}
+              onDrop={(e) => handleDayDrop(e, day)}
+            >
+              {/* Date number */}
+              <div
+                style={{
+                  ...styles.dateNum,
+                  ...(todayDay ? styles.todayNum : {}),
+                }}
+              >
+                {format(day, "d")}
+              </div>
 
-                return (
-                  <div
-                    key={key}
-                    style={{
-                      ...s.cell,
-                      ...(inMonth ? {} : s.cellOut),
-                      ...(isDragTarget ? s.cellDragOver : {}),
-                      height: cellH,
-                    }}
-                    onDragOver={(e) => handleCellDragOver(e, weekIdx, colIdx)}
-                    onDrop={(e) => handleCellDrop(e, day)}
-                  >
-                    <div style={{ ...s.dateNum, ...(today ? s.todayNum : {}) }}>
-                      {format(day, "d")}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Card bars */}
-              {laid.map(
-                ({
-                  card,
-                  colStart,
-                  colEnd,
-                  isFirstWeek,
-                  isLastWeek,
-                  row,
-                  color,
-                }) => {
-                  const isDraggingThis = dragging?.cardId === card.id;
-
-                  let previewColEnd = colEnd;
-                  if (
-                    isDraggingThis &&
-                    dragWeekIdx === weekIdx &&
-                    dragCol !== null
-                  ) {
-                    previewColEnd = Math.max(colStart, dragCol);
-                  }
-
-                  const left = `calc(${colStart} * (100% / 7))`;
-                  const width = `calc(${previewColEnd - colStart + 1} * (100% / 7) - 4px)`;
-                  const top = CARD_TOP_OFFSET + row * (ROW_HEIGHT + CARD_GAP);
-
+              {/* Card pills — show up to 3, then "+N more" */}
+              <div style={styles.cardPills}>
+                {dayCards.slice(0, 3).map((card) => {
+                  const color = listColor(card.idList, lists);
+                  const isFirst = isCardStart(card, day);
                   return (
                     <div
-                      key={card.id + "-" + weekIdx}
+                      key={card.id + key}
                       style={{
-                        ...s.bar,
-                        left,
-                        width,
-                        top,
-                        height: ROW_HEIGHT,
+                        ...styles.pill,
                         background: color + "33",
-                        borderLeft: isFirstWeek ? `3px solid ${color}` : "none",
-                        borderRight: isLastWeek
-                          ? `1px solid ${color}44`
-                          : "none",
-                        borderRadius: `${isFirstWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isFirstWeek ? "5px" : "0"}`,
-                        opacity: isDraggingThis ? 0.6 : 1,
-                        transition: isDraggingThis ? "none" : "opacity 0.15s",
-                        // Only block pointer events on non-dragged bars AFTER drag has started
-                        pointerEvents:
-                          dragging && draggingStarted.current && !isDraggingThis
-                            ? "none"
-                            : "auto",
+                        borderLeft: `3px solid ${color}`,
+                        opacity: isFirst ? 1 : 0.8,
+                        position: "relative",
+                        cursor: "default",
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -311,56 +228,25 @@ export default function CalendarView({
                       }}
                       title={card.name}
                     >
-                      <span style={s.barText}>{card.name}</span>
-
-                      {isLastWeek && (
+                      <span style={styles.pillText}>{card.name}</span>
+                      {/* Resize handle — only on the last visible day of the card */}
+                      {card.due && isSameDay(day, parseISO(card.due)) && (
                         <div
                           draggable
-                          onDragStart={(e) =>
-                            handleResizeDragStart(e, card, weekIdx)
-                          }
+                          onDragStart={(e) => handleResizeDragStart(e, card)}
                           onDragEnd={handleDragEnd}
                           onClick={(e) => e.stopPropagation()}
-                          style={s.resizeHandle}
+                          style={styles.resizeHandle}
                           title="Drag to change due date"
-                        >
-                          <div style={s.resizeGrip} />
-                        </div>
+                        />
                       )}
                     </div>
                   );
-                },
-              )}
-
-              {/* +N more overflow */}
-              {weekDays.map((day, colIdx) => {
-                const key = format(day, "yyyy-MM-dd");
-                const visibleRows = Math.floor(
-                  (cellH - CARD_TOP_OFFSET - 8) / (ROW_HEIGHT + CARD_GAP),
-                );
-                const dayCards = laid.filter(
-                  (l) => colIdx >= l.colStart && colIdx <= l.colEnd,
-                );
-                const hidden = dayCards.filter(
-                  (l) => l.row >= visibleRows,
-                ).length;
-                if (hidden === 0) return null;
-                return (
-                  <div
-                    key={"more-" + key}
-                    style={{
-                      position: "absolute",
-                      left: `calc(${colIdx} * (100% / 7) + 4px)`,
-                      top:
-                        CARD_TOP_OFFSET + visibleRows * (ROW_HEIGHT + CARD_GAP),
-                      fontSize: 10,
-                      color: "#8b949e",
-                    }}
-                  >
-                    +{hidden} more
-                  </div>
-                );
-              })}
+                })}
+                {dayCards.length > 3 && (
+                  <span style={styles.more}>+{dayCards.length - 3} more</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -369,14 +255,13 @@ export default function CalendarView({
   );
 }
 
-const s = {
+const styles = {
   wrapper: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
     background: "#1a1f2e",
     minWidth: 0,
-    overflowX: "hidden",
     fontFamily: "'Segoe UI', system-ui, sans-serif",
     overflowY: "auto",
   },
@@ -391,7 +276,16 @@ const s = {
     top: 0,
     zIndex: 10,
   },
-  toolbarLeft: { display: "flex", alignItems: "center", gap: 8 },
+  toolbarLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  toolbarRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
   navBtn: {
     background: "none",
     border: "1px solid rgba(255,255,255,0.1)",
@@ -440,23 +334,24 @@ const s = {
     textTransform: "uppercase",
     letterSpacing: "0.5px",
   },
-  grid: { flex: 1, display: "flex", flexDirection: "column" },
-  weekRow: {
+  grid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
-    position: "relative",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
+    flex: 1,
   },
   cell: {
     borderRight: "1px solid rgba(255,255,255,0.05)",
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
     padding: "6px 8px",
-    position: "relative",
+    minHeight: 110,
+    display: "flex",
+    flexDirection: "column",
+    gap: 3,
+    cursor: "default",
     transition: "background 0.1s",
   },
-  cellOut: { opacity: 0.35 },
-  cellDragOver: {
-    background: "rgba(0,208,132,0.08)",
-    outline: "1px dashed rgba(0,208,132,0.4)",
+  cellOut: {
+    opacity: 0.35,
   },
   dateNum: {
     width: 26,
@@ -468,47 +363,56 @@ const s = {
     color: "#8b949e",
     fontSize: 13,
     fontWeight: 500,
+    flexShrink: 0,
+    marginBottom: 2,
   },
-  todayNum: { background: "#00d084", color: "#0d1117", fontWeight: 700 },
-  bar: {
-    position: "absolute",
+  todayNum: {
+    background: "#00d084",
+    color: "#0d1117",
+    fontWeight: 700,
+  },
+  cardPills: {
     display: "flex",
-    alignItems: "center",
-    paddingLeft: 6,
-    paddingRight: 20,
+    flexDirection: "column",
+    gap: 2,
+    flex: 1,
+    overflow: "hidden",
+  },
+  pill: {
+    borderRadius: 4,
+    padding: "2px 6px",
     cursor: "pointer",
     overflow: "hidden",
-    userSelect: "none",
-    zIndex: 2,
+    transition: "filter 0.15s",
   },
-  barText: {
+  pillText: {
     color: "#e6edf3",
     fontSize: 11,
-    fontWeight: 500,
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    flex: 1,
+    display: "block",
+  },
+  more: {
+    color: "#8b949e",
+    fontSize: 10,
+    paddingLeft: 4,
+  },
+  cellDragOver: {
+    background: "rgba(0,208,132,0.08)",
+    outline: "1px dashed rgba(0,208,132,0.4)",
   },
   resizeHandle: {
     position: "absolute",
     right: 0,
     top: 0,
     bottom: 0,
-    width: 14,
+    width: 8,
     cursor: "col-resize",
+    background: "rgba(255,255,255,0.25)",
+    borderRadius: "0 4px 4px 0",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "rgba(255,255,255,0.1)",
-    borderRadius: "0 4px 4px 0",
-    zIndex: 3,
-  },
-  resizeGrip: {
-    width: 2,
-    height: 12,
-    background: "rgba(255,255,255,0.5)",
-    borderRadius: 2,
-    boxShadow: "3px 0 0 rgba(255,255,255,0.3)",
   },
 };
