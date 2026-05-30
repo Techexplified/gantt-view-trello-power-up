@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "./Sidebar";
 import CalendarView from "./CalendarView";
 import RightPanel from "./RightPanel";
@@ -16,11 +16,24 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
     error,
     refetch,
   } = useBoardData(activeBoardId);
-  const [cards, setCards] = useState([]);
 
+  // Tracks optimistic due-date updates made by dragging, keyed by card id.
+  // These override fetchedCards until Trello confirms via the next refetch.
+  const [pendingUpdates, setPendingUpdates] = useState({});
+
+  // Merge fetchedCards with any pending optimistic updates.
+  // When the board changes we also clear stale pending updates.
+  const prevBoardIdRef = useRef(activeBoardId);
   useEffect(() => {
-    setCards(fetchedCards);
-  }, [fetchedCards]);
+    if (activeBoardId !== prevBoardIdRef.current) {
+      prevBoardIdRef.current = activeBoardId;
+      setPendingUpdates({});
+    }
+  }, [activeBoardId]);
+
+  const cards = fetchedCards.map((c) =>
+    pendingUpdates[c.id] ? { ...c, due: pendingUpdates[c.id] } : c,
+  );
 
   return (
     <div style={styles.layout}>
@@ -46,9 +59,8 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             lists={lists}
             onCardClick={setSelectedCard}
             onCardUpdated={(cardId, newDue) => {
-              setCards((prev) =>
-                prev.map((c) => (c.id === cardId ? { ...c, due: newDue } : c)),
-              );
+              // Apply optimistic update immediately so the card doesn't snap back.
+              setPendingUpdates((prev) => ({ ...prev, [cardId]: newDue }));
             }}
           />
         )}
@@ -68,6 +80,9 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
           onClose={() => setSelectedCard(null)}
           onCardUpdated={() => {
             setSelectedCard(null);
+            // After a modal save, refetch from Trello and clear pending updates
+            // so fresh server data takes over.
+            setPendingUpdates({});
             refetch();
           }}
         />
