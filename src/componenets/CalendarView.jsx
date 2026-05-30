@@ -125,6 +125,7 @@ export default function CalendarView({
   const [dragCol, setDragCol] = useState(null); // current column being hovered (0-6)
   const [dragWeekIdx, setDragWeekIdx] = useState(null);
   const gridRef = useRef(null);
+  const draggingStarted = useRef(false);
 
   const prevMonth = () => setCurrentDate((d) => subMonths(d, 1));
   const nextMonth = () => setCurrentDate((d) => addMonths(d, 1));
@@ -135,12 +136,14 @@ export default function CalendarView({
     e.stopPropagation();
     setDragging({ cardId: card.id, originalDue: card.due, card });
     setDragWeekIdx(weekIdx);
-    // Invisible ghost
     const ghost = document.createElement("div");
     ghost.style.cssText = "position:fixed;top:-999px;opacity:0;";
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 0, 0);
-    setTimeout(() => document.body.removeChild(ghost), 0);
+    setTimeout(() => {
+      document.body.removeChild(ghost);
+      draggingStarted.current = true; // ← ADD THIS
+    }, 0);
   }, []);
 
   const handleCellDragOver = useCallback(
@@ -189,6 +192,7 @@ export default function CalendarView({
   );
 
   const handleDragEnd = useCallback(() => {
+    draggingStarted.current = false; // ← ADD THIS
     setDragging(null);
     setDragCol(null);
     setDragWeekIdx(null);
@@ -309,7 +313,10 @@ export default function CalendarView({
                         borderRadius: `${isFirstWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isLastWeek ? "5px" : "0"} ${isFirstWeek ? "5px" : "0"}`,
                         opacity: isDraggingThis ? 0.6 : 1,
                         transition: isDraggingThis ? "none" : "opacity 0.15s",
-                        pointerEvents: dragging ? "none" : "auto", // ← ADD THIS LINE
+                        pointerEvents:
+                          dragging && draggingStarted.current && !isDraggingThis
+                            ? "none"
+                            : "auto",
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
