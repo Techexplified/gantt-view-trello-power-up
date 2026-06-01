@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useRef, useState } from "react";
+import { createCard } from "../utils/trelloApi";
 
 const LABEL_COLORS = {
   green: "#61bd4f",
@@ -13,7 +14,12 @@ const LABEL_COLORS = {
   black: "#344563",
 };
 
-export default function RightPanel({ lists, cards, onCardClick }) {
+export default function RightPanel({
+  lists,
+  cards,
+  onCardClick,
+  onCardCreated,
+}) {
   // Group cards by list
   const cardsByList = lists.reduce((acc, list) => {
     acc[list.id] = cards.filter((c) => c.idList === list.id);
@@ -51,6 +57,7 @@ export default function RightPanel({ lists, cards, onCardClick }) {
                   ))
                 )}
               </div>
+              <AddCardRow listId={list.id} onCardCreated={onCardCreated} />
             </div>
           );
         })}
@@ -101,6 +108,82 @@ function CardTile({ card, onClick }) {
           🕐 {formatDate(dueDate)}
         </span>
       )}
+    </div>
+  );
+}
+
+function AddCardRow({ listId, onCardCreated }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef(null);
+
+  const openInput = () => {
+    setOpen(true);
+    // Focus after render
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const cancel = () => {
+    setOpen(false);
+    setTitle("");
+  };
+
+  const submit = async () => {
+    const trimmed = title.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      const newCard = await createCard(listId, trimmed);
+      onCardCreated && onCardCreated(newCard);
+      setTitle("");
+      setOpen(false);
+    } catch (e) {
+      console.error("Failed to create card:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter") submit();
+    if (e.key === "Escape") cancel();
+  };
+
+  if (!open) {
+    return (
+      <button style={styles.addCardBtn} onClick={openInput}>
+        <span style={styles.addCardPlus}>+</span> Add a card
+      </button>
+    );
+  }
+
+  return (
+    <div style={styles.addCardInputWrap}>
+      <input
+        ref={inputRef}
+        style={styles.addCardInput}
+        placeholder="Enter card title..."
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={onKeyDown}
+        disabled={saving}
+      />
+      <div style={styles.addCardActions}>
+        <button
+          style={{
+            ...styles.addCardConfirm,
+            opacity: saving || !title.trim() ? 0.5 : 1,
+          }}
+          onClick={submit}
+          disabled={saving || !title.trim()}
+        >
+          {saving ? "Adding…" : "Add card"}
+        </button>
+        <button style={styles.addCardCancel} onClick={cancel}>
+          ✕
+        </button>
+      </div>
     </div>
   );
 }
@@ -234,5 +317,71 @@ const styles = {
     padding: "2px 6px",
     alignSelf: "flex-start",
     fontWeight: 500,
+  },
+  addCardBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    width: "100%",
+    background: "none",
+    border: "none",
+    color: "#8b949e",
+    fontSize: 12,
+    fontWeight: 500,
+    padding: "8px 12px",
+    cursor: "pointer",
+    textAlign: "left",
+    borderTop: "1px solid rgba(255,255,255,0.05)",
+    transition: "color 0.15s, background 0.15s",
+    flexShrink: 0,
+  },
+  addCardPlus: {
+    fontSize: 15,
+    lineHeight: 1,
+    color: "#8b949e",
+  },
+  addCardInputWrap: {
+    padding: "8px",
+    borderTop: "1px solid rgba(255,255,255,0.05)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    flexShrink: 0,
+  },
+  addCardInput: {
+    width: "100%",
+    background: "rgba(255,255,255,0.07)",
+    border: "1px solid rgba(0,208,132,0.4)",
+    borderRadius: 6,
+    color: "#e6edf3",
+    fontSize: 12,
+    padding: "7px 9px",
+    outline: "none",
+    boxSizing: "border-box",
+    fontFamily: "'Segoe UI', system-ui, sans-serif",
+  },
+  addCardActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  addCardConfirm: {
+    background: "#00d084",
+    border: "none",
+    borderRadius: 6,
+    color: "#0d1117",
+    fontSize: 11,
+    fontWeight: 700,
+    padding: "5px 10px",
+    cursor: "pointer",
+  },
+  addCardCancel: {
+    background: "none",
+    border: "none",
+    color: "#8b949e",
+    fontSize: 14,
+    cursor: "pointer",
+    padding: "4px 6px",
+    borderRadius: 4,
   },
 };
