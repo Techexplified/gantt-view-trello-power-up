@@ -154,3 +154,7 @@ export const archiveCard = (cardId) =>
 
 export const deleteCard = (cardId) =>
   apiFetch(`/cards/${cardId}`, {}, { method: "DELETE" });
+
+// ── Create card ───────────────────────────────────────────────────────────────
+export const createCard = (listId, name) =>
+  apiFetch(`/cards`, {}, { method: "POST", body: { idList: listId, name } });
