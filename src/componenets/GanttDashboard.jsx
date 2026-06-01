@@ -56,7 +56,14 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
 
       {/* ── Right Panel ── */}
       {activeBoardId && !loading && !error && (
-        <RightPanel lists={lists} cards={cards} onCardClick={setSelectedCard} />
+        <RightPanel
+          lists={lists}
+          cards={cards}
+          onCardClick={setSelectedCard}
+          onCardCreated={(newCard) => {
+            setCards((prev) => [...prev, newCard]);
+          }}
+        />
       )}
 
       {/* ── Card Detail Modal ── */}
