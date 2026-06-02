@@ -305,7 +305,7 @@ export default function CardModal({
                   </h2>
                 )}
                 <button style={s.closeBtn} onClick={onClose}>
-                  ✕
+                  <X size={20} />
                 </button>
               </div>
 
@@ -848,13 +848,15 @@ const s = {
     outline: "none",
   },
   closeBtn: {
+    position: "absolute",
+    top: 18,
+    right: 18,
     background: "none",
     border: "none",
     color: "#8b949e",
-    fontSize: 18,
     cursor: "pointer",
-    padding: "4px 6px",
-    flexShrink: 0,
+    padding: 4,
+    zIndex: 10,
   },
   breadcrumb: {
     color: "#484f58",
