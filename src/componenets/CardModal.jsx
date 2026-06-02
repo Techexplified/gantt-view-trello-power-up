@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
+  Clock3,
+  Users,
+  Tag,
+  List,
+  AlignLeft,
+  MessageCircle,
+  X,
+} from "lucide-react";
+import {
   getCard,
   getBoardMembers,
   getBoardLabels,
@@ -310,7 +319,7 @@ export default function CardModal({
               </div>
 
               {/* ── Dates ── */}
-              <DetailRow icon="🕐" label="Dates">
+              <DetailRow icon={<Clock3 size={16} />} label="Dates">
                 <div className="flex flex-wrap gap-4">
                   <div style={s.datesRow}>
                     <div style={s.dateField}>
@@ -384,7 +393,7 @@ export default function CardModal({
               </DetailRow>
 
               {/* ── Members ── */}
-              <DetailRow icon="👤" label="Members">
+              <DetailRow icon={<Users size={16} />} label="Members">
                 <div className="flex flex-wrap items-center gap-2">
                   <div style={s.memberRow}>
                     {card.members?.map((m) => (
@@ -426,7 +435,7 @@ export default function CardModal({
               </DetailRow>
 
               {/* ── Labels ── */}
-              <DetailRow icon="🏷" label="Labels">
+              <DetailRow icon={<Tag size={16} />} label="Labels">
                 <div className="flex flex-wrap items-center gap-2">
                   <div style={s.labelRow}>
                     {card.labels?.map((lbl) => (
@@ -482,7 +491,7 @@ export default function CardModal({
               </DetailRow>
 
               {/* ── List ── */}
-              <DetailRow icon="📋" label="List">
+              <DetailRow icon={<List size={16} />} label="List">
                 <div style={{ position: "relative", display: "inline-block" }}>
                   <button
                     style={s.listBtn}
@@ -510,7 +519,7 @@ export default function CardModal({
               </DetailRow>
 
               {/* ── Description ── */}
-              <DetailRow icon="☰" label="Description">
+              <DetailRow icon={<AlignLeft size={16} />} label="Description">
                 {editingDesc ? (
                   <div>
                     <textarea
@@ -609,7 +618,7 @@ export default function CardModal({
 
               {/* ── Comments ── */}
               <Section
-                icon="💬"
+                icon={<MessageCircle size={16} />}
                 label={`Comments (${card.actions?.length || 0})`}
               >
                 {/* New comment input */}
