@@ -991,8 +991,11 @@ const s = {
     borderRadius: 8,
     padding: "10px 12px",
     cursor: "pointer",
-    minHeight: 48,
     border: "1px solid rgba(255,255,255,0.06)",
+
+    height: 100, // adjust to match textarea height
+    overflowY: "auto",
+    overflowX: "hidden",
   },
   descText: {
     color: "#c9d1d9",
