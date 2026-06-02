@@ -7,6 +7,10 @@ import {
   AlignLeft,
   MessageCircle,
   X,
+  ExternalLink,
+  Archive,
+  Trash2,
+  Paperclip,
 } from "lucide-react";
 import {
   getCard,
@@ -311,10 +315,6 @@ export default function CardModal({
 
               {/* Board / list breadcrumb */}
               <div style={s.breadcrumb}>
-                in list{" "}
-                <span style={s.breadcrumbList}>
-                  {lists.find((l) => l.id === card.idList)?.name || "—"}
-                </span>
                 {saving && <span style={s.savingBadge}>Saving…</span>}
               </div>
 
@@ -677,39 +677,54 @@ export default function CardModal({
             {/* ── Right sidebar actions ── */}
             <div style={s.sidebar}>
               <p style={s.sidebarHeading}>Actions</p>
+
               <a
                 href={card.url}
                 target="_blank"
                 rel="noreferrer"
-                style={s.actionBtn}
+                style={s.sidebarItem}
               >
-                ↗ Open in Trello
+                <ExternalLink size={15} />
+                <span>Open in Trello</span>
               </a>
-              <button style={s.actionBtn} onClick={handleArchive}>
-                📦 Archive
-              </button>
-              <button
-                style={{ ...s.actionBtn, ...s.actionBtnDanger }}
-                onClick={handleDelete}
-              >
-                🗑 Delete
+
+              <button style={s.sidebarItem} onClick={handleArchive}>
+                <Archive size={15} />
+                <span>Archive</span>
               </button>
 
-              {/* Attachments */}
+              <button
+                style={{
+                  ...s.sidebarItem,
+                  ...s.sidebarDanger,
+                }}
+                onClick={handleDelete}
+              >
+                <Trash2 size={15} />
+                <span>Delete</span>
+              </button>
+
               {card.attachments?.length > 0 && (
                 <>
-                  <p style={{ ...s.sidebarHeading, marginTop: 20 }}>
+                  <p
+                    style={{
+                      ...s.sidebarHeading,
+                      marginTop: 24,
+                    }}
+                  >
                     Attachments
                   </p>
+
                   {card.attachments.map((att) => (
                     <a
                       key={att.id}
                       href={att.url}
                       target="_blank"
                       rel="noreferrer"
-                      style={s.attachmentLink}
+                      style={s.sidebarItem}
                     >
-                      📎 {att.name}
+                      <Paperclip size={15} />
+                      <span>{att.name}</span>
                     </a>
                   ))}
                 </>
@@ -764,7 +779,7 @@ function PickerItem({ children, active, onClick }) {
 
 function DetailRow({ icon, label, children }) {
   return (
-    <div className="flex gap-8 mb-8">
+    <div className="flex gap-8 mb-6">
       <div className="w-24 shrink-0 flex items-center gap-3 text-gray-400 text-sm">
         <span>{icon}</span>
         <span className="font-normal text-[13px]">{label}</span>
@@ -1162,6 +1177,29 @@ const s = {
     textTransform: "uppercase",
     letterSpacing: "0.8px",
     margin: "0 0 4px",
+  },
+  sidebarItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+
+    width: "100%",
+    padding: "8px 0",
+
+    background: "transparent",
+    border: "none",
+
+    color: "#c9d1d9",
+    textDecoration: "none",
+
+    fontSize: 14,
+    fontWeight: 500,
+
+    cursor: "pointer",
+  },
+
+  sidebarDanger: {
+    color: "#ff8fa3",
   },
   actionBtn: {
     background: "transparent",
