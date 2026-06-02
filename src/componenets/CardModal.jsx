@@ -755,8 +755,8 @@ function PickerItem({ children, active, onClick }) {
 
 function DetailRow({ icon, label, children }) {
   return (
-    <div className="flex gap-8 mb-8">
-      <div className="w-40 shrink-0 flex items-center gap-3 text-gray-400">
+    <div className="flex gap-4 mb-8">
+      <div className="w-24 shrink-0 flex items-center gap-3 text-gray-400">
         <span>{icon}</span>
         <span className="font-medium">{label}</span>
       </div>
@@ -785,7 +785,7 @@ const s = {
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 16,
     width: "100%",
-    maxWidth: 1100,
+    maxWidth: 850,
     display: "flex",
     flexDirection: "row",
     gap: 0,
@@ -819,7 +819,7 @@ const s = {
   title: {
     flex: 1,
     color: "#fff",
-    fontSize: 42,
+    fontSize: 28,
     fontWeight: 700,
     margin: 0,
     lineHeight: 1.2,
@@ -1136,7 +1136,7 @@ const s = {
   },
   // Right sidebar
   sidebar: {
-    width: 240,
+    width: 180,
     flexShrink: 0,
     padding: "24px 16px",
     borderLeft: "1px solid rgba(255,255,255,0.07)",
