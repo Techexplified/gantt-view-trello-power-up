@@ -755,7 +755,7 @@ function PickerItem({ children, active, onClick }) {
 
 function DetailRow({ icon, label, children }) {
   return (
-    <div className="flex gap-4 mb-8">
+    <div className="flex gap-8 mb-8">
       <div className="w-24 shrink-0 flex items-center gap-3 text-gray-400">
         <span>{icon}</span>
         <span className="font-medium">{label}</span>
