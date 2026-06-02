@@ -1000,6 +1000,8 @@ const s = {
     lineHeight: 1.6,
     margin: 0,
     whiteSpace: "pre-wrap",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word",
   },
   descInput: {
     width: "100%",
