@@ -310,172 +310,179 @@ export default function CardModal({
               </div>
 
               {/* ── Dates ── */}
-              <Section icon="🕐" label="Dates">
-                <div style={s.datesRow}>
-                  <div style={s.dateField}>
-                    <span style={s.dateLabel}>Start</span>
-                    {editingStart ? (
-                      <div style={s.dateInputWrap}>
-                        <input
-                          type="datetime-local"
-                          style={s.dateInput}
-                          value={startVal}
-                          onChange={(e) => setStartVal(e.target.value)}
-                        />
-                        <button style={s.saveDateBtn} onClick={saveStart}>
-                          Save
-                        </button>
-                        <button
-                          style={s.cancelDateBtn}
-                          onClick={() => setEditingStart(false)}
+              <DetailRow icon="🕐" label="Dates">
+                <div className="flex flex-wrap gap-4">
+                  <div style={s.datesRow}>
+                    <div style={s.dateField}>
+                      <span style={s.dateLabel}>Start</span>
+                      {editingStart ? (
+                        <div style={s.dateInputWrap}>
+                          <input
+                            type="datetime-local"
+                            style={s.dateInput}
+                            value={startVal}
+                            onChange={(e) => setStartVal(e.target.value)}
+                          />
+                          <button style={s.saveDateBtn} onClick={saveStart}>
+                            Save
+                          </button>
+                          <button
+                            style={s.cancelDateBtn}
+                            onClick={() => setEditingStart(false)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          style={s.dateValue}
+                          onClick={() => setEditingStart(true)}
                         >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        style={s.dateValue}
-                        onClick={() => setEditingStart(true)}
-                      >
-                        {card.start ? (
-                          fmtDateTime(card.start)
-                        ) : (
-                          <span style={s.addDate}>+ Add start date</span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                  <div style={s.dateField}>
-                    <span style={s.dateLabel}>Due</span>
-                    {editingDue ? (
-                      <div style={s.dateInputWrap}>
-                        <input
-                          type="datetime-local"
-                          style={s.dateInput}
-                          value={dueVal}
-                          onChange={(e) => setDueVal(e.target.value)}
-                        />
-                        <button style={s.saveDateBtn} onClick={saveDue}>
-                          Save
-                        </button>
-                        <button
-                          style={s.cancelDateBtn}
-                          onClick={() => setEditingDue(false)}
+                          {card.start ? (
+                            fmtDateTime(card.start)
+                          ) : (
+                            <span style={s.addDate}>+ Add start date</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <div style={s.dateField}>
+                      <span style={s.dateLabel}>Due</span>
+                      {editingDue ? (
+                        <div style={s.dateInputWrap}>
+                          <input
+                            type="datetime-local"
+                            style={s.dateInput}
+                            value={dueVal}
+                            onChange={(e) => setDueVal(e.target.value)}
+                          />
+                          <button style={s.saveDateBtn} onClick={saveDue}>
+                            Save
+                          </button>
+                          <button
+                            style={s.cancelDateBtn}
+                            onClick={() => setEditingDue(false)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          style={s.dateValue}
+                          onClick={() => setEditingDue(true)}
                         >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <span
-                        style={s.dateValue}
-                        onClick={() => setEditingDue(true)}
-                      >
-                        {card.due ? (
-                          fmtDateTime(card.due)
-                        ) : (
-                          <span style={s.addDate}>+ Add due date</span>
-                        )}
-                      </span>
-                    )}
+                          {card.due ? (
+                            fmtDateTime(card.due)
+                          ) : (
+                            <span style={s.addDate}>+ Add due date</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </Section>
+              </DetailRow>
 
               {/* ── Members ── */}
-              <Section icon="👤" label="Members">
-                <div style={s.memberRow}>
-                  {card.members?.map((m) => (
-                    <Avatar key={m.id} member={m} size={30} />
-                  ))}
-                  <div style={{ position: "relative" }}>
-                    <button
-                      style={s.addChip}
-                      onClick={() => {
-                        setShowMemberPicker((p) => !p);
-                        setShowLabelPicker(false);
-                      }}
-                    >
-                      + Add member
-                    </button>
-                    {showMemberPicker && (
-                      <Picker onClose={() => setShowMemberPicker(false)}>
-                        {boardMembers.map((m) => {
-                          const active = card.members?.some(
-                            (cm) => cm.id === m.id,
-                          );
-                          return (
-                            <PickerItem
-                              key={m.id}
-                              active={active}
-                              onClick={() => toggleMember(m)}
-                            >
-                              <Avatar member={m} size={24} />
-                              <span>{m.fullName}</span>
-                              {active && <span style={s.checkMark}>✓</span>}
-                            </PickerItem>
-                          );
-                        })}
-                      </Picker>
-                    )}
+              <DetailRow icon="👤" label="Members">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div style={s.memberRow}>
+                    {card.members?.map((m) => (
+                      <Avatar key={m.id} member={m} size={30} />
+                    ))}
+                    <div style={{ position: "relative" }}>
+                      <button
+                        style={s.addChip}
+                        onClick={() => {
+                          setShowMemberPicker((p) => !p);
+                          setShowLabelPicker(false);
+                        }}
+                      >
+                        + Add member
+                      </button>
+                      {showMemberPicker && (
+                        <Picker onClose={() => setShowMemberPicker(false)}>
+                          {boardMembers.map((m) => {
+                            const active = card.members?.some(
+                              (cm) => cm.id === m.id,
+                            );
+                            return (
+                              <PickerItem
+                                key={m.id}
+                                active={active}
+                                onClick={() => toggleMember(m)}
+                              >
+                                <Avatar member={m} size={24} />
+                                <span>{m.fullName}</span>
+                                {active && <span style={s.checkMark}>✓</span>}
+                              </PickerItem>
+                            );
+                          })}
+                        </Picker>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </Section>
+              </DetailRow>
 
               {/* ── Labels ── */}
-              <Section icon="🏷" label="Labels">
-                <div style={s.labelRow}>
-                  {card.labels?.map((lbl) => (
-                    <span
-                      key={lbl.id}
-                      style={{
-                        ...s.labelChip,
-                        background: LABEL_COLORS[lbl.color] || "#666",
-                      }}
-                    >
-                      {lbl.name || lbl.color}
-                    </span>
-                  ))}
-                  <div style={{ position: "relative" }}>
-                    <button
-                      style={s.addChip}
-                      onClick={() => {
-                        setShowLabelPicker((p) => !p);
-                        setShowMemberPicker(false);
-                      }}
-                    >
-                      + Add label
-                    </button>
-                    {showLabelPicker && (
-                      <Picker onClose={() => setShowLabelPicker(false)}>
-                        {boardLabels.map((lbl) => {
-                          const active = card.labels?.some(
-                            (cl) => cl.id === lbl.id,
-                          );
-                          return (
-                            <PickerItem
-                              key={lbl.id}
-                              active={active}
-                              onClick={() => toggleLabel(lbl)}
-                            >
-                              <span
-                                style={{
-                                  ...s.labelDot,
-                                  background: LABEL_COLORS[lbl.color] || "#666",
-                                }}
-                              />
-                              <span>{lbl.name || lbl.color}</span>
-                              {active && <span style={s.checkMark}>✓</span>}
-                            </PickerItem>
-                          );
-                        })}
-                      </Picker>
-                    )}
+              <DetailRow icon="🏷" label="Labels">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div style={s.labelRow}>
+                    {card.labels?.map((lbl) => (
+                      <span
+                        key={lbl.id}
+                        style={{
+                          ...s.labelChip,
+                          background: LABEL_COLORS[lbl.color] || "#666",
+                        }}
+                      >
+                        {lbl.name || lbl.color}
+                      </span>
+                    ))}
+                    <div style={{ position: "relative" }}>
+                      <button
+                        style={s.addChip}
+                        onClick={() => {
+                          setShowLabelPicker((p) => !p);
+                          setShowMemberPicker(false);
+                        }}
+                      >
+                        + Add label
+                      </button>
+                      {showLabelPicker && (
+                        <Picker onClose={() => setShowLabelPicker(false)}>
+                          {boardLabels.map((lbl) => {
+                            const active = card.labels?.some(
+                              (cl) => cl.id === lbl.id,
+                            );
+                            return (
+                              <PickerItem
+                                key={lbl.id}
+                                active={active}
+                                onClick={() => toggleLabel(lbl)}
+                              >
+                                <span
+                                  style={{
+                                    ...s.labelDot,
+                                    background:
+                                      LABEL_COLORS[lbl.color] || "#666",
+                                  }}
+                                />
+                                <span>{lbl.name || lbl.color}</span>
+                                {active && <span style={s.checkMark}>✓</span>}
+                              </PickerItem>
+                            );
+                          })}
+                        </Picker>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </Section>
+              </DetailRow>
 
               {/* ── List ── */}
-              <Section icon="📋" label="List">
+              <DetailRow icon="📋" label="List">
                 <div style={{ position: "relative", display: "inline-block" }}>
                   <button
                     style={s.listBtn}
@@ -500,10 +507,10 @@ export default function CardModal({
                     </Picker>
                   )}
                 </div>
-              </Section>
+              </DetailRow>
 
               {/* ── Description ── */}
-              <Section icon="☰" label="Description">
+              <DetailRow icon="☰" label="Description">
                 {editingDesc ? (
                   <div>
                     <textarea
@@ -541,7 +548,7 @@ export default function CardModal({
                     )}
                   </div>
                 )}
-              </Section>
+              </DetailRow>
 
               {/* ── Checklists ── */}
               {card.checklists?.map((cl) => {
@@ -746,6 +753,19 @@ function PickerItem({ children, active, onClick }) {
   );
 }
 
+function DetailRow({ icon, label, children }) {
+  return (
+    <div className="flex gap-8 mb-8">
+      <div className="w-40 shrink-0 flex items-center gap-3 text-gray-400">
+        <span>{icon}</span>
+        <span className="font-medium">{label}</span>
+      </div>
+
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 const s = {
   overlay: {
@@ -765,7 +785,7 @@ const s = {
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 16,
     width: "100%",
-    maxWidth: 780,
+    maxWidth: 1100,
     display: "flex",
     flexDirection: "row",
     gap: 0,
@@ -798,15 +818,11 @@ const s = {
   },
   title: {
     flex: 1,
-    color: "#e6edf3",
-    fontSize: 20,
+    color: "#fff",
+    fontSize: 42,
     fontWeight: 700,
     margin: 0,
-    cursor: "pointer",
-    lineHeight: 1.4,
-    padding: "4px 6px",
-    borderRadius: 6,
-    transition: "background 0.15s",
+    lineHeight: 1.2,
   },
   titleInput: {
     flex: 1,
@@ -1120,7 +1136,7 @@ const s = {
   },
   // Right sidebar
   sidebar: {
-    width: 168,
+    width: 240,
     flexShrink: 0,
     padding: "24px 16px",
     borderLeft: "1px solid rgba(255,255,255,0.07)",
@@ -1136,19 +1152,11 @@ const s = {
     margin: "0 0 4px",
   },
   actionBtn: {
-    display: "block",
-    width: "100%",
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 8,
+    background: "transparent",
+    border: "none",
     color: "#c9d1d9",
-    fontSize: 12,
-    fontWeight: 500,
-    padding: "8px 10px",
-    cursor: "pointer",
-    textAlign: "left",
-    textDecoration: "none",
-    transition: "background 0.15s",
+    padding: "10px 0",
+    fontSize: 16,
   },
   actionBtnDanger: { color: "#ff8fa3", borderColor: "rgba(235,90,70,0.25)" },
   attachmentLink: {
