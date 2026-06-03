@@ -315,6 +315,7 @@ export default function CalendarView({
                         overflow: "hidden",
                         boxSizing: "border-box",
                         zIndex: 2,
+                        pointerEvents: "all",
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -323,9 +324,7 @@ export default function CalendarView({
                       title={card.name}
                     >
                       {/* Only show label text on the first segment */}
-                      {isFirst && (
-                        <span style={styles.pillText}>{card.name}</span>
-                      )}
+                      <span style={styles.pillText}>{card.name}</span>
 
                       {/* Resize handle — only on last segment */}
                       {isLast && card.due && (
