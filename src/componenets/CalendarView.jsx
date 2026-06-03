@@ -315,7 +315,7 @@ export default function CalendarView({
                         overflow: "hidden",
                         boxSizing: "border-box",
                         zIndex: 2,
-                        pointerEvents: "all",
+                        pointerEvents: dragging ? "none" : "all",
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
