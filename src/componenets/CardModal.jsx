@@ -11,6 +11,7 @@ import {
   Archive,
   Trash2,
   Paperclip,
+  ListChecks,
 } from "lucide-react";
 import {
   getCard,
@@ -569,7 +570,7 @@ export default function CardModal({
                 return (
                   <DetailRow
                     key={cl.id}
-                    icon={<AlignLeft size={16} />}
+                    icon={<ListChecks size={16} />}
                     label={cl.name}
                   >
                     <div style={s.progressBarWrap}>
