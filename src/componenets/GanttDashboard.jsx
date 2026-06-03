@@ -45,9 +45,17 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             cards={cards}
             lists={lists}
             onCardClick={setSelectedCard}
-            onCardUpdated={(cardId, newDue) => {
+            onCardUpdated={(cardId, newDue, newStart) => {
               setCards((prev) =>
-                prev.map((c) => (c.id === cardId ? { ...c, due: newDue } : c)),
+                prev.map((c) =>
+                  c.id === cardId
+                    ? {
+                        ...c,
+                        due: newDue,
+                        ...(newStart !== undefined && { start: newStart }),
+                      }
+                    : c,
+                ),
               );
             }}
           />

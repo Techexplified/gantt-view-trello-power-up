@@ -75,7 +75,15 @@ function CardTile({ card, onClick }) {
     d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
-    <div style={styles.card} onClick={onClick}>
+    <div
+      style={styles.card}
+      onClick={onClick}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("cardId", card.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+    >
       {/* Labels */}
       {card.labels && card.labels.length > 0 && (
         <div style={styles.labels}>

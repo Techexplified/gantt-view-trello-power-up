@@ -166,6 +166,24 @@ export default function CalendarView({
 
   const handleDayDrop = async (e, day) => {
     e.preventDefault();
+
+    // ── Drop from RightPanel ──────────────────────────────
+    const externalCardId = e.dataTransfer.getData("cardId");
+    if (externalCardId) {
+      const snapped = new Date(day);
+      snapped.setHours(23, 59, 0, 0);
+      const isoDate = snapped.toISOString();
+      try {
+        await updateCard(externalCardId, {
+          start: isoDate,
+          due: isoDate,
+        });
+        onCardUpdated && onCardUpdated(externalCardId, isoDate, isoDate);
+      } catch (err) {
+        console.error("Failed to set dates on drop:", err);
+      }
+      return; // don't fall through to resize logic
+    }
     if (!dragging) return;
     const snapped = new Date(day);
     snapped.setHours(23, 59, 0, 0);
