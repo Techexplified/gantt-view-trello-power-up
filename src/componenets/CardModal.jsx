@@ -742,19 +742,6 @@ export default function CardModal({
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-function Section({ icon, label, children }) {
-  return (
-    <div style={s.section}>
-      <div style={s.sectionHeader}>
-        <span style={s.sectionIcon}>{icon}</span>
-        <span style={s.sectionLabel}>{label}</span>
-      </div>
-      <div style={s.sectionBody}>{children}</div>
-    </div>
-  );
-}
-
 function Picker({ children, onClose }) {
   const ref = useRef();
   useEffect(() => {
@@ -893,23 +880,6 @@ const s = {
     fontSize: 11,
     marginLeft: 8,
   },
-  // Sections
-  section: { marginBottom: 22 },
-  sectionHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  sectionIcon: { fontSize: 15, width: 20, textAlign: "center", flexShrink: 0 },
-  sectionLabel: {
-    color: "#8b949e",
-    fontSize: 13,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-  sectionBody: { paddingLeft: 28 },
   // Dates
   datesRow: { display: "flex", flexWrap: "wrap", gap: 16 },
   dateField: { display: "flex", flexDirection: "column", gap: 4 },
