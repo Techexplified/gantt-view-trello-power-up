@@ -567,7 +567,11 @@ export default function CardModal({
                   0;
                 const pct = total ? Math.round((done / total) * 100) : 0;
                 return (
-                  <Section key={cl.id} icon="☑" label={cl.name}>
+                  <DetailRow
+                    key={cl.id}
+                    icon={<AlignLeft size={16} />}
+                    label={cl.name}
+                  >
                     <div style={s.progressBarWrap}>
                       <span style={s.progressPct}>{pct}%</span>
                       <div style={s.progressTrack}>
@@ -612,12 +616,12 @@ export default function CardModal({
                           </span>
                         </div>
                       ))}
-                  </Section>
+                  </DetailRow>
                 );
               })}
 
               {/* ── Comments ── */}
-              <Section
+              <DetailRow
                 icon={<MessageCircle size={16} />}
                 label={`Comments (${card.actions?.length || 0})`}
               >
@@ -671,7 +675,7 @@ export default function CardModal({
                     </div>
                   </div>
                 ))}
-              </Section>
+              </DetailRow>
             </div>
 
             {/* ── Right sidebar actions ── */}
