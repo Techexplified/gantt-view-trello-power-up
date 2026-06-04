@@ -319,7 +319,6 @@ export default function CalendarView({
                         top: top,
                         height: LANE_H,
                         background: isHovered ? color + "55" : color + "33",
-                        boxShadow: isHovered ? `0 2px 8px ${color}44` : "none",
                         borderLeft: isFirst ? `3px solid ${color}` : "none",
                         borderRight: "none",
                         borderRadius:
