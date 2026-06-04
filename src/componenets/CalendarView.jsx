@@ -124,6 +124,7 @@ export default function CalendarView({
   const days = getCalendarDays(currentDate);
   const [dragging, setDragging] = useState(null);
   const [dragOverDay, setDragOverDay] = useState(null);
+  const [hoveredCardKey, setHoveredCardKey] = useState(null);
 
   // Split days into weeks (rows of 7)
   const weeks = [];
@@ -305,6 +306,9 @@ export default function CalendarView({
                   const widthPct = (span / 7) * 100;
                   const top = DATE_NUM_H + lane * (LANE_H + LANE_GAP);
 
+                  const cardKey = card.id + "-" + weekIndex + "-" + lane;
+                  const isHovered = hoveredCardKey === cardKey;
+
                   return (
                     <div
                       key={card.id + "-" + weekIndex + "-" + lane}
@@ -314,7 +318,8 @@ export default function CalendarView({
                         width: `calc(${widthPct}% - ${isFirst ? 3 : 0}px - ${isLast ? 5 : 0}px)`,
                         top: top,
                         height: LANE_H,
-                        background: color + "33",
+                        background: isHovered ? color + "55" : color + "33",
+                        boxShadow: isHovered ? `0 2px 8px ${color}44` : "none",
                         borderLeft: isFirst ? `3px solid ${color}` : "none",
                         borderRight: "none",
                         borderRadius:
@@ -335,10 +340,13 @@ export default function CalendarView({
                         zIndex: 2,
                         pointerEvents: dragging ? "none" : "all",
                       }}
+                      className="hover:brightness-125 hover:shadow-md transition-all duration-150"
                       onClick={(e) => {
                         e.stopPropagation();
                         onCardClick && onCardClick(card);
                       }}
+                      onMouseEnter={() => setHoveredCardKey(cardKey)}
+                      onMouseLeave={() => setHoveredCardKey(null)}
                       title={card.name}
                     >
                       {/* Only show label text on the first segment */}

@@ -76,7 +76,11 @@ function CardTile({ card, onClick }) {
 
   return (
     <div
-      style={styles.card}
+      className="flex flex-col gap-1.5 p-2.5 rounded-lg cursor-pointer
+             bg-white/5 border border-white/[0.07]
+             hover:bg-white/10 hover:border-white/20
+             hover:-translate-y-px hover:shadow-lg
+             transition-all duration-150"
       onClick={onClick}
       draggable
       onDragStart={(e) => {
@@ -160,7 +164,13 @@ function AddCardRow({ listId, onCardCreated }) {
 
   if (!open) {
     return (
-      <button style={styles.addCardBtn} onClick={openInput}>
+      <button
+        className="flex items-center gap-1.5 w-full text-xs font-medium
+             text-[#8b949e] px-3 py-2 border-t border-white/5
+             hover:bg-white/5 hover:text-[#c9d1d9]
+             transition-all duration-150"
+        onClick={openInput}
+      >
         <span style={styles.addCardPlus}>+</span> Add a card
       </button>
     );
