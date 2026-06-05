@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getMyBoards } from "../utils/trelloApi";
 import { clearToken } from "../utils/auth";
+import { ChartNoAxesGantt } from "lucide-react";
 
 export default function Sidebar({
   board,
@@ -103,22 +104,19 @@ export default function Sidebar({
 
 function PIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="12" fill="#00d084" fillOpacity="0.2" />
-
-      <text
-        x="12"
-        y="13"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize="12"
-        fontWeight="700"
-        fill="#00d084"
-        fontFamily="Inter, sans-serif"
-      >
-        T
-      </text>
-    </svg>
+    <div
+      style={{
+        width: 52,
+        height: 52,
+        borderRadius: "50%",
+        background: "rgba(0,208,132,0.15)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <ChartNoAxesGantt size={22} color="#00d084" />
+    </div>
   );
 }
 

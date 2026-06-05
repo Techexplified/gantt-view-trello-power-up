@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { authorizeWithTrello } from "../utils/auth";
+import { ChartNoAxesGantt } from "lucide-react";
 
 export default function LoginScreen({ onAuth }) {
   const [loading, setLoading] = useState(false);
@@ -25,23 +26,20 @@ export default function LoginScreen({ onAuth }) {
       <div style={styles.card}>
         {/* Logo */}
         <div style={styles.logoWrap}>
-          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-            <circle cx="26" cy="26" r="26" fill="#00d084" fillOpacity="0.15" />
-            <circle cx="26" cy="26" r="18" fill="#00d084" fillOpacity="0.25" />
-
-            <text
-              x="26"
-              y="26"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="22"
-              fontWeight="700"
-              fill="#00d084"
-              fontFamily="Inter, sans-serif"
-            >
-              T
-            </text>
-          </svg>
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: "rgba(0,208,132,0.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <ChartNoAxesGantt size={22} color="#00d084" />
+          </div>
           <span style={styles.logoText}>TaskFlow</span>
         </div>
 
