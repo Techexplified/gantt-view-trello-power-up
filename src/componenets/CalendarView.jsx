@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -125,6 +125,7 @@ export default function CalendarView({
   const [dragging, setDragging] = useState(null);
   const [dragOverDay, setDragOverDay] = useState(null);
   const [hoveredCardKey, setHoveredCardKey] = useState(null);
+  const lastDragKey = useRef(null);
 
   // Split days into weeks (rows of 7)
   const weeks = [];
@@ -160,9 +161,10 @@ export default function CalendarView({
 
   const handleDayDragOver = (e, day) => {
     e.preventDefault();
-    if (!dragging) return;
     const key = format(day, "yyyy-MM-dd");
-    if (dragOverDay !== key) setDragOverDay(key);
+    if (lastDragKey.current === key) return; // ← skip if same cell
+    lastDragKey.current = key;
+    setDragOverDay(key);
   };
 
   const handleDayDrop = async (e, day) => {
@@ -183,6 +185,7 @@ export default function CalendarView({
       } catch (err) {
         console.error("Failed to set dates on drop:", err);
       }
+      lastDragKey.current = null;
       return; // don't fall through to resize logic
     }
     if (!dragging) return;
@@ -196,6 +199,7 @@ export default function CalendarView({
     }
     setDragging(null);
     setDragOverDay(null);
+    lastDragKey.current = null;
     try {
       await updateCard(dragging.cardId, { due: snapped.toISOString() });
       onCardUpdated && onCardUpdated(dragging.cardId, snapped.toISOString());
@@ -207,6 +211,7 @@ export default function CalendarView({
   const handleDragEnd = () => {
     setDragging(null);
     setDragOverDay(null);
+    lastDragKey.current = null; // ← add
   };
 
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -269,12 +274,11 @@ export default function CalendarView({
                       style={{
                         ...styles.cell,
                         ...(inMonth ? {} : styles.cellOut),
-                        ...(dragOverDay === key && dragging
-                          ? styles.cellDragOver
-                          : {}),
+                        ...(dragOverDay === key ? styles.cellDragOver : {}),
                       }}
                       onDragOver={(e) => handleDayDragOver(e, day)}
                       onDrop={(e) => handleDayDrop(e, day)}
+                      onDragLeave={() => setDragOverDay(null)}
                     >
                       <div
                         style={{
