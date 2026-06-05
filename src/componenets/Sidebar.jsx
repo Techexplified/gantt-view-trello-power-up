@@ -106,8 +106,8 @@ function PIcon() {
   return (
     <div
       style={{
-        width: 52,
-        height: 52,
+        width: 32,
+        height: 32,
         borderRadius: "50%",
         background: "rgba(0,208,132,0.15)",
         display: "flex",
