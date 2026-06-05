@@ -211,7 +211,6 @@ export default function CalendarView({
 
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-  const goToday = () => setCurrentDate(new Date());
 
   const LANE_H = 22; // height of one card bar (px)
   const LANE_GAP = 3; // gap between lanes (px)
@@ -226,19 +225,14 @@ export default function CalendarView({
           <button style={styles.navBtn} onClick={prevMonth}>
             ‹
           </button>
-          <button style={styles.todayBtn} onClick={goToday}>
-            Today
-          </button>
-          <button style={styles.navBtn} onClick={nextMonth}>
-            ›
-          </button>
           <span style={styles.monthLabel}>
             {format(currentDate, "MMMM yyyy")}
           </span>
+          <button style={styles.navBtn} onClick={nextMonth}>
+            ›
+          </button>
         </div>
-        <div style={styles.toolbarRight}>
-          <span style={styles.viewLabel}>Month</span>
-        </div>
+        <div />
       </div>
 
       {/* ── Day-of-week headers ── */}
@@ -396,7 +390,6 @@ const styles = {
     zIndex: 10,
   },
   toolbarLeft: { display: "flex", alignItems: "center", gap: 8 },
-  toolbarRight: { display: "flex", alignItems: "center", gap: 8 },
   navBtn: {
     background: "none",
     border: "1px solid rgba(255,255,255,0.1)",
@@ -407,30 +400,13 @@ const styles = {
     cursor: "pointer",
     lineHeight: 1.2,
   },
-  todayBtn: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    color: "#c9d1d9",
-    borderRadius: 6,
-    padding: "4px 12px",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-  },
   monthLabel: {
     color: "#e6edf3",
     fontWeight: 700,
     fontSize: 16,
     marginLeft: 4,
   },
-  viewLabel: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 6,
-    padding: "4px 12px",
-    color: "#8b949e",
-    fontSize: 13,
-  },
+
   dayHeaders: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
