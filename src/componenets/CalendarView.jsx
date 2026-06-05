@@ -125,6 +125,7 @@ export default function CalendarView({
   const [dragging, setDragging] = useState(null);
   const [dragOverDay, setDragOverDay] = useState(null);
   const [hoveredCardKey, setHoveredCardKey] = useState(null);
+  const [dragPreviewDue, setDragPreviewDue] = useState(null);
   const lastDragKey = useRef(null);
 
   // Split days into weeks (rows of 7)
@@ -134,7 +135,17 @@ export default function CalendarView({
   }
 
   // Compute all segments and lane assignments
-  const allSegments = cards.flatMap((card) => getCardSegments(card, weeks));
+  const allSegments = cards.flatMap((card) => {
+    // If this card is being resize-dragged, use the preview due date
+    const previewCard =
+      dragPreviewDue && dragPreviewDue.cardId === card.id
+        ? {
+            ...card,
+            due: format(dragPreviewDue.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          }
+        : card;
+    return getCardSegments(previewCard, weeks);
+  });
   const laneAssignments = assignLanes(allSegments);
 
   // Max lanes per week (for cell min-height calculation)
@@ -162,9 +173,14 @@ export default function CalendarView({
   const handleDayDragOver = (e, day) => {
     e.preventDefault();
     const key = format(day, "yyyy-MM-dd");
-    if (lastDragKey.current === key) return; // ← skip if same cell
+    if (lastDragKey.current === key) return;
     lastDragKey.current = key;
     setDragOverDay(key);
+
+    // ← add this: live preview for resize drag
+    if (dragging) {
+      setDragPreviewDue({ cardId: dragging.cardId, dueDate: day });
+    }
   };
 
   const handleDayDrop = async (e, day) => {
@@ -199,6 +215,7 @@ export default function CalendarView({
     }
     setDragging(null);
     setDragOverDay(null);
+    setDragPreviewDue(null); // ← add
     lastDragKey.current = null;
     try {
       await updateCard(dragging.cardId, { due: snapped.toISOString() });
@@ -211,7 +228,8 @@ export default function CalendarView({
   const handleDragEnd = () => {
     setDragging(null);
     setDragOverDay(null);
-    lastDragKey.current = null; // ← add
+    setDragPreviewDue(null); // ← add
+    lastDragKey.current = null;
   };
 
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
