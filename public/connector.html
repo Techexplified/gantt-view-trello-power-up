@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Gantt View – Connector</title>
+    <title>TaskFlow – Connector</title>
     <!-- The Trello Power-Up SDK MUST be loaded here because Trello loads
        this file as a standalone iframe, not through your React app. -->
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
@@ -47,11 +47,11 @@
                   dark: ICON_DARK, // shown on dark Trello backgrounds
                   light: ICON, // shown on light Trello backgrounds
                 },
-                text: "Gantt View",
+                text: "TaskFlow",
                 condition: "always",
                 callback: function (t) {
                   return t.modal({
-                    title: "Gantt View",
+                    title: "TaskFlow",
                     url: BASE_URL + "/index.html",
                     fullscreen: true,
                     accentColor: "#00d084",
@@ -64,7 +64,7 @@
           // 2. Settings popup (gear icon in the Power-Up list)
           "show-settings": function (t) {
             return t.popup({
-              title: "Gantt View Settings",
+              title: "TaskFlow Settings",
               url: BASE_URL + "/index.html?settings=1",
               height: 120,
             });
@@ -72,7 +72,7 @@
         },
         {
           appKey: "e45a7c2350efb8ff28812397ba677b0c", // <-- replace with your real API key
-          appName: "Gantt View",
+          appName: "TaskFlow",
         },
       );
     </script>

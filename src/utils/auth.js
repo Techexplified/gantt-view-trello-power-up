@@ -12,7 +12,7 @@ export const AUTH_CALLBACK_URL = `${window.location.origin}/auth.html`;
 export const TRELLO_AUTH_URL = (returnUrl) =>
   `https://trello.com/1/authorize?` +
   `expiration=never` +
-  `&name=Gantt+View` +
+  `&name=TaskFlow` +
   `&scope=read,write` +
   `&response_type=token` +
   `&key=${TRELLO_API_KEY}` +
@@ -22,7 +22,7 @@ export const TRELLO_AUTH_URL = (returnUrl) =>
 // ─────────────────────────────────────────────────────────────────────────────
 // Token helpers (stored in localStorage so they survive page reloads)
 // ─────────────────────────────────────────────────────────────────────────────
-const TOKEN_KEY = "gantt_trello_token";
+const TOKEN_KEY = "taskflow_trello_token";
 
 export const getStoredToken = () => localStorage.getItem(TOKEN_KEY);
 export const storeToken = (token) => localStorage.setItem(TOKEN_KEY, token);

@@ -40,12 +40,12 @@ export default function LoginScreen({ onAuth }) {
               G
             </text>
           </svg>
-          <span style={styles.logoText}>Gantt View</span>
+          <span style={styles.logoText}>TaskFlow</span>
         </div>
 
         <div style={styles.divider} />
 
-        <h1 style={styles.heading}>Welcome to Gantt View!</h1>
+        <h1 style={styles.heading}>Welcome to TaskFlow!</h1>
         <p style={styles.subtext}>To get started, please sign in</p>
 
         {error && <div style={styles.error}>{error}</div>}
@@ -69,8 +69,8 @@ export default function LoginScreen({ onAuth }) {
         </button>
 
         <p style={styles.footer}>
-          By signing in, you agree to grant Gantt View read access to your
-          Trello boards.
+          By signing in, you agree to grant TaskFlow read access to your Trello
+          boards.
         </p>
       </div>
     </div>

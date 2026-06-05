@@ -31,7 +31,7 @@ export default function Sidebar({
         {!collapsed && (
           <div style={styles.logoRow}>
             <PIcon />
-            <span style={styles.logoText}>Gantt View</span>
+            <span style={styles.logoText}>TaskFlow</span>
           </div>
         )}
         <button
