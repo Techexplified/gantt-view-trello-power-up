@@ -108,13 +108,13 @@ function PIcon() {
 
       <text
         x="12"
-        y="12"
+        y="13"
         textAnchor="middle"
         dominantBaseline="middle"
         fontSize="12"
         fontWeight="700"
         fill="#00d084"
-        fontFamily="monospace"
+        fontFamily="Inter, sans-serif"
       >
         T
       </text>
