@@ -105,15 +105,18 @@ function PIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="12" fill="#00d084" fillOpacity="0.2" />
+
       <text
-        x="6"
-        y="17"
+        x="12"
+        y="12"
+        textAnchor="middle"
+        dominantBaseline="middle"
         fontSize="12"
         fontWeight="700"
         fill="#00d084"
         fontFamily="monospace"
       >
-        P
+        T
       </text>
     </svg>
   );

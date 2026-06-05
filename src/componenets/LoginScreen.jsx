@@ -28,16 +28,18 @@ export default function LoginScreen({ onAuth }) {
           <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
             <circle cx="26" cy="26" r="26" fill="#00d084" fillOpacity="0.15" />
             <circle cx="26" cy="26" r="18" fill="#00d084" fillOpacity="0.25" />
-            {/* P letter */}
+
             <text
-              x="15"
-              y="35"
+              x="26"
+              y="26"
+              textAnchor="middle"
+              dominantBaseline="middle"
               fontSize="22"
               fontWeight="700"
               fill="#00d084"
-              fontFamily="monospace"
+              fontFamily="Inter, sans-serif"
             >
-              G
+              T
             </text>
           </svg>
           <span style={styles.logoText}>TaskFlow</span>
