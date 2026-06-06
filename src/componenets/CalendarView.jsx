@@ -26,9 +26,15 @@ function getCalendarDays(date) {
   return eachDayOfInterval({ start, end });
 }
 
+function toLocalMidnight(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 function cardDates(card) {
-  const start = card.start ? parseISO(card.start) : null;
-  const due = card.due ? parseISO(card.due) : null;
+  const start = card.start ? toLocalMidnight(parseISO(card.start)) : null;
+  const due = card.due ? toLocalMidnight(parseISO(card.due)) : null;
   return { start, due };
 }
 
