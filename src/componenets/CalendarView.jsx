@@ -14,7 +14,7 @@ import {
   parseISO,
   differenceInCalendarDays,
 } from "date-fns";
-import { updateCard } from "../utils/trelloApi";
+import { createCardWithDates, updateCard } from "../utils/trelloApi";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -125,6 +125,7 @@ export default function CalendarView({
   lists = [],
   onCardClick,
   onCardUpdated,
+  onCardCreated,
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const days = getCalendarDays(currentDate);
@@ -132,6 +133,9 @@ export default function CalendarView({
   const [dragOverDay, setDragOverDay] = useState(null);
   const [hoveredCardKey, setHoveredCardKey] = useState(null);
   const [dragPreviewDue, setDragPreviewDue] = useState(null);
+  const [createCardPopup, setCreateCardPopup] = useState(null);
+  const [newCardTitle, setNewCardTitle] = useState("");
+  const [selectedListId, setSelectedListId] = useState("");
   const lastDragKey = useRef(null);
 
   // Split days into weeks (rows of 7)
@@ -238,6 +242,30 @@ export default function CalendarView({
     lastDragKey.current = null;
   };
 
+  const handleCreateCard = async () => {
+    if (!newCardTitle.trim()) return;
+
+    const clickedDay = new Date(createCardPopup.day);
+
+    clickedDay.setHours(23, 59, 0, 0);
+
+    try {
+      const card = await createCardWithDates(
+        selectedListId,
+        newCardTitle.trim(),
+        clickedDay.toISOString(),
+        clickedDay.toISOString(),
+      );
+
+      onCardCreated?.(card);
+
+      setCreateCardPopup(null);
+      setNewCardTitle("");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
@@ -299,6 +327,18 @@ export default function CalendarView({
                         ...styles.cell,
                         ...(inMonth ? {} : styles.cellOut),
                         ...(dragOverDay === key ? styles.cellDragOver : {}),
+                      }}
+                      onClick={(e) => {
+                        if (dragging) return;
+
+                        setCreateCardPopup({
+                          x: e.clientX,
+                          y: e.clientY,
+                          day,
+                        });
+
+                        setSelectedListId(lists?.[0]?.id || "");
+                        setNewCardTitle("");
                       }}
                       onDragOver={(e) => handleDayDragOver(e, day)}
                       onDrop={(e) => handleDayDrop(e, day)}
@@ -392,6 +432,79 @@ export default function CalendarView({
           );
         })}
       </div>
+      {createCardPopup && (
+        <div
+          className="fixed inset-0 z-9999"
+          onClick={() => setCreateCardPopup(null)}
+        >
+          <div
+            className="absolute w-72 rounded-xl border border-white/10 bg-[#161b27] p-4 shadow-2xl"
+            style={{
+              left: createCardPopup.x,
+              top: createCardPopup.y,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              value={newCardTitle}
+              onChange={(e) => setNewCardTitle(e.target.value)}
+              placeholder="Enter card title..."
+              className="
+          w-full rounded-lg
+          border border-[#00d084]
+          bg-[#1e2432]
+          px-3 py-2
+          text-white
+          outline-none
+        "
+            />
+
+            <select
+              value={selectedListId}
+              onChange={(e) => setSelectedListId(e.target.value)}
+              className="
+          mt-3 w-full rounded-lg
+          border border-white/10
+          bg-[#1e2432]
+          px-3 py-2
+          text-white
+        "
+            >
+              {lists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={handleCreateCard}
+                className="
+            rounded-lg
+            bg-[#00d084]
+            px-4 py-2
+            font-semibold
+            text-black
+          "
+              >
+                Add card
+              </button>
+
+              <button
+                onClick={() => setCreateCardPopup(null)}
+                className="
+            px-2 py-2
+            text-[#8b949e]
+            hover:text-white
+          "
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

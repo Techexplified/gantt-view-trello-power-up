@@ -158,3 +158,18 @@ export const deleteCard = (cardId) =>
 // ── Create card ───────────────────────────────────────────────────────────────
 export const createCard = (listId, name) =>
   apiFetch(`/cards`, {}, { method: "POST", body: { idList: listId, name } });
+
+export const createCardWithDates = (listId, name, start, due) =>
+  apiFetch(
+    "/cards",
+    {},
+    {
+      method: "POST",
+      body: {
+        idList: listId,
+        name,
+        start,
+        due,
+      },
+    },
+  );

@@ -58,6 +58,9 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
                 ),
               );
             }}
+            onCardCreated={(newCard) => {
+              setCards((prev) => [...prev, newCard]);
+            }}
           />
         )}
       </main>
