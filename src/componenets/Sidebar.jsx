@@ -12,6 +12,7 @@ export default function Sidebar({
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     getMyBoards()
@@ -92,12 +93,37 @@ export default function Sidebar({
       <div style={styles.bottom}>
         <button
           style={styles.logoutBtn}
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           title="Sign out"
         >
           {collapsed ? "⏻" : "⏻  Sign out"}
         </button>
       </div>
+
+      {showLogoutConfirm && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3 style={styles.modalTitle}>Sign Out</h3>
+
+            <p style={styles.modalText}>
+              Are you sure you want to sign out of TaskFlow?
+            </p>
+
+            <div style={styles.modalActions}>
+              <button
+                style={styles.cancelBtn}
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancel
+              </button>
+
+              <button style={styles.confirmBtn} onClick={handleLogout}>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
@@ -254,5 +280,63 @@ const styles = {
     textAlign: "left",
     whiteSpace: "nowrap",
     overflow: "hidden",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.65)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+  },
+
+  modal: {
+    width: 380,
+    background: "#1e2432",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 16,
+    padding: 24,
+    boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
+  },
+
+  modalTitle: {
+    color: "#e6edf3",
+    fontSize: 18,
+    fontWeight: 700,
+    margin: "0 0 12px",
+  },
+
+  modalText: {
+    color: "#8b949e",
+    fontSize: 14,
+    lineHeight: 1.6,
+    margin: 0,
+  },
+
+  modalActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 24,
+  },
+
+  cancelBtn: {
+    background: "transparent",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "#c9d1d9",
+    padding: "10px 16px",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+
+  confirmBtn: {
+    background: "#00d084",
+    border: "none",
+    color: "#0d1117",
+    fontWeight: 700,
+    padding: "10px 16px",
+    borderRadius: 8,
+    cursor: "pointer",
   },
 };
