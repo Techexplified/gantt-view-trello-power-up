@@ -101,8 +101,14 @@ export default function Sidebar({
       </div>
 
       {showLogoutConfirm && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
+        <div
+          style={styles.modalOverlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowLogoutConfirm(false);
+          }}
+        >
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>Sign Out</h3>
 
             <p style={styles.modalText}>
@@ -289,6 +295,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 9999,
+    backdropFilter: "blur(4px)",
   },
 
   modal: {

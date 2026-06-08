@@ -490,23 +490,21 @@ export default function CalendarView({
                   ))}
                 </select>
 
-                <div className="mt-4 flex items-center gap-2">
-                  <button
-                    onClick={handleCreateCard}
-                    className="rounded-lg bg-[#00d084] px-4 py-2 font-semibold text-[#0d1117] hover:brightness-110"
-                  >
-                    Add card
-                  </button>
-
+                <div className="relative">
+                  {/* X button — top right corner of popup */}
                   <button
                     onClick={() => setCreateCardPopup(null)}
-                    className="
-            px-2 py-2
-            text-[#8b949e]
-            hover:text-white
-          "
+                    className="absolute -top-[88px] right-0 text-[#8b949e] hover:text-white p-1"
                   >
                     <X size={18} />
+                  </button>
+
+                  {/* Add card button — full width, clearly visible */}
+                  <button
+                    onClick={handleCreateCard}
+                    className="w-full rounded-lg bg-[#00d084] py-2 font-semibold text-[#0d1117] hover:brightness-110"
+                  >
+                    Add card
                   </button>
                 </div>
               </div>
