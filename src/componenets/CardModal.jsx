@@ -12,6 +12,7 @@ import {
   Trash2,
   Paperclip,
   ListChecks,
+  CalendarDays,
 } from "lucide-react";
 import {
   getCard,
@@ -269,6 +270,16 @@ export default function CardModal({
     onCardUpdated && onCardUpdated(null);
     onClose();
   };
+
+  const handleRemoveFromCalendar = async () => {
+    try {
+      await updateCard(card.id, { start: null, due: null });
+      onCardUpdated();
+    } catch (err) {
+      console.error("Failed to remove card from calendar:", err);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm("Permanently delete this card? This cannot be undone."))
       return;
@@ -696,6 +707,11 @@ export default function CardModal({
               <button style={s.sidebarItem} onClick={handleArchive}>
                 <Archive size={15} />
                 <span>Archive</span>
+              </button>
+
+              <button style={s.sidebarItem} onClick={handleRemoveFromCalendar}>
+                <CalendarDays size={15} />
+                <span>Remove from calendar</span>
               </button>
 
               <button
