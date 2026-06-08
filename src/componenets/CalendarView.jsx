@@ -451,58 +451,49 @@ export default function CalendarView({
               onClick={() => setCreateCardPopup(null)}
             >
               <div
-                className="absolute w-72 rounded-xl border border-white/10 bg-[#161b27] p-4 shadow-2xl"
-                style={{
-                  left,
-                  top,
-                }}
+                className="absolute w-72 rounded-xl border border-white/10 bg-[#161b27] shadow-2xl"
+                style={{ left, top }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <input
-                  value={newCardTitle}
-                  onChange={(e) => setNewCardTitle(e.target.value)}
-                  placeholder="Enter card title..."
-                  className="
-          w-full rounded-lg
-          border border-[#00d084]
-          bg-[#1e2432]
-          px-3 py-2
-          text-white
-          outline-none
-        "
-                />
-
-                <select
-                  value={selectedListId}
-                  onChange={(e) => setSelectedListId(e.target.value)}
-                  className="
-          mt-3 w-full rounded-lg
-          border border-white/10
-          bg-[#1e2432]
-          px-3 py-2
-          text-white
-        "
-                >
-                  {lists.map((list) => (
-                    <option key={list.id} value={list.id}>
-                      {list.name}
-                    </option>
-                  ))}
-                </select>
-
-                <div className="relative">
-                  {/* X button — top right corner of popup */}
+                {/* Header row with X button */}
+                <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                  <span className="text-sm font-semibold text-[#e6edf3]">
+                    New Card
+                  </span>
                   <button
                     onClick={() => setCreateCardPopup(null)}
-                    className="absolute -top-[88px] right-0 text-[#8b949e] hover:text-white p-1"
+                    className="text-[#8b949e] hover:text-white"
                   >
-                    <X size={18} />
+                    <X size={16} />
                   </button>
-
-                  {/* Add card button — full width, clearly visible */}
+                </div>
+                {/* Body */}
+                <div className="px-4 pb-4 flex flex-col gap-3">
+                  <input
+                    autoFocus
+                    value={newCardTitle}
+                    onChange={(e) => setNewCardTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreateCard();
+                      if (e.key === "Escape") setCreateCardPopup(null);
+                    }}
+                    placeholder="Enter card title..."
+                    className="w-full rounded-lg border border-[#00d084] bg-[#1e2432] px-3 py-2 text-sm text-white outline-none placeholder:text-[#484f58]"
+                  />
+                  <select
+                    value={selectedListId}
+                    onChange={(e) => setSelectedListId(e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-[#1e2432] px-3 py-2 text-sm text-white outline-none"
+                  >
+                    {lists.map((list) => (
+                      <option key={list.id} value={list.id}>
+                        {list.name}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     onClick={handleCreateCard}
-                    className="w-full rounded-lg bg-[#00d084] py-2 font-semibold text-[#0d1117] hover:brightness-110"
+                    className="w-full rounded-lg bg-[#00d084] py-2 text-sm font-bold text-[#0d1117] hover:brightness-110"
                   >
                     Add card
                   </button>
