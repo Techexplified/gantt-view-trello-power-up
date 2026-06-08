@@ -273,7 +273,7 @@ export default function CardModal({
 
   const handleRemoveFromCalendar = async () => {
     try {
-      await updateCard(card.id, { start: null, due: null });
+      await updateCard(card.id, { start: "", due: "" });
       onCardUpdated();
     } catch (err) {
       console.error("Failed to remove card from calendar:", err);
