@@ -15,6 +15,7 @@ import {
   differenceInCalendarDays,
 } from "date-fns";
 import { createCardWithDates, updateCard } from "../utils/trelloApi";
+import { X } from "lucide-react";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -432,24 +433,36 @@ export default function CalendarView({
           );
         })}
       </div>
-      {createCardPopup && (
-        <div
-          className="fixed inset-0 z-9999"
-          onClick={() => setCreateCardPopup(null)}
-        >
-          <div
-            className="absolute w-72 rounded-xl border border-white/10 bg-[#161b27] p-4 shadow-2xl"
-            style={{
-              left: createCardPopup.x,
-              top: createCardPopup.y,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input
-              value={newCardTitle}
-              onChange={(e) => setNewCardTitle(e.target.value)}
-              placeholder="Enter card title..."
-              className="
+      {createCardPopup &&
+        (() => {
+          const POPUP_W = 288; // w-72 = 18rem = 288px
+          const POPUP_H = 184; // approximate popup height
+          const MARGIN = 8; // keep away from edges
+          const rawX = createCardPopup.x;
+          const rawY = createCardPopup.y;
+          const left = Math.min(rawX, window.innerWidth - POPUP_W - MARGIN);
+          const top =
+            rawY + POPUP_H + MARGIN > window.innerHeight
+              ? rawY - POPUP_H // flip above the click point
+              : rawY;
+          return (
+            <div
+              className="fixed inset-0 z-[9999]"
+              onClick={() => setCreateCardPopup(null)}
+            >
+              <div
+                className="absolute w-72 rounded-xl border border-white/10 bg-[#161b27] p-4 shadow-2xl"
+                style={{
+                  left,
+                  top,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  value={newCardTitle}
+                  onChange={(e) => setNewCardTitle(e.target.value)}
+                  placeholder="Enter card title..."
+                  className="
           w-full rounded-lg
           border border-[#00d084]
           bg-[#1e2432]
@@ -457,54 +470,49 @@ export default function CalendarView({
           text-white
           outline-none
         "
-            />
+                />
 
-            <select
-              value={selectedListId}
-              onChange={(e) => setSelectedListId(e.target.value)}
-              className="
+                <select
+                  value={selectedListId}
+                  onChange={(e) => setSelectedListId(e.target.value)}
+                  className="
           mt-3 w-full rounded-lg
           border border-white/10
           bg-[#1e2432]
           px-3 py-2
           text-white
         "
-            >
-              {lists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name}
-                </option>
-              ))}
-            </select>
+                >
+                  {lists.map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name}
+                    </option>
+                  ))}
+                </select>
 
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                onClick={handleCreateCard}
-                className="
-            rounded-lg
-            bg-[#00d084]
-            px-4 py-2
-            font-semibold
-            text-black
-          "
-              >
-                Add card
-              </button>
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    onClick={handleCreateCard}
+                    className="rounded-lg bg-[#00d084] px-4 py-2 font-semibold text-[#0d1117] hover:brightness-110"
+                  >
+                    Add card
+                  </button>
 
-              <button
-                onClick={() => setCreateCardPopup(null)}
-                className="
+                  <button
+                    onClick={() => setCreateCardPopup(null)}
+                    className="
             px-2 py-2
             text-[#8b949e]
             hover:text-white
           "
-              >
-                ✕
-              </button>
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        })()}
     </div>
   );
 }
