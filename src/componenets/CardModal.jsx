@@ -1153,7 +1153,7 @@ const s = {
   },
   // Right sidebar
   sidebar: {
-    width: 180,
+    width: 220,
     flexShrink: 0,
     padding: "24px 16px",
     borderLeft: "1px solid rgba(255,255,255,0.07)",
