@@ -27,86 +27,85 @@ export default function Sidebar({
   };
 
   return (
-    <aside style={{ ...styles.sidebar, width: collapsed ? 52 : 220 }}>
-      {/* Top header */}
-      <div style={styles.header}>
-        {!collapsed && (
-          <div style={styles.logoRow}>
-            <PIcon />
-            <span style={styles.logoText}>TaskFlow</span>
-          </div>
-        )}
-        <button
-          style={styles.collapseBtn}
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? "›" : "‹"}
-        </button>
-      </div>
-
-      {!collapsed && (
-        <>
-          {/* Active board name */}
-          {board && (
-            <div style={styles.activeBoard}>
-              <span style={styles.activeBoardLabel}>Current board</span>
-              <span style={styles.activeBoardName}>{board.name}</span>
+    <>
+      <aside style={{ ...styles.sidebar, width: collapsed ? 52 : 220 }}>
+        {/* Top header */}
+        <div style={styles.header}>
+          {!collapsed && (
+            <div style={styles.logoRow}>
+              <PIcon />
+              <span style={styles.logoText}>TaskFlow</span>
             </div>
           )}
+          <button
+            style={styles.collapseBtn}
+            onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? "›" : "‹"}
+          </button>
+        </div>
 
-          {/* Board list */}
-          <div style={styles.section}>
-            <span style={styles.sectionLabel}>Your Boards</span>
-            {loading ? (
-              <div style={styles.loadingRow}>Loading…</div>
-            ) : (
-              <ul style={styles.list}>
-                {boards.map((b) => (
-                  <li key={b.id}>
-                    <button
-                      style={{
-                        ...styles.boardItem,
-                        ...(b.id === activeBoardId
-                          ? styles.boardItemActive
-                          : {}),
-                      }}
-                      onClick={() => onSelectBoard(b.id)}
-                    >
-                      <span
-                        style={{
-                          ...styles.boardDot,
-                          background: b.prefs?.backgroundColor || "#0079bf",
-                        }}
-                      />
-                      <span style={styles.boardItemName}>{b.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+        {!collapsed && (
+          <>
+            {/* Active board name */}
+            {board && (
+              <div style={styles.activeBoard}>
+                <span style={styles.activeBoardLabel}>Current board</span>
+                <span style={styles.activeBoardName}>{board.name}</span>
+              </div>
             )}
-          </div>
-        </>
-      )}
 
-      {/* Bottom: logout */}
-      <div style={styles.bottom}>
-        <button
-          style={styles.logoutBtn}
-          onClick={() => setShowLogoutConfirm(true)}
-          title="Sign out"
-        >
-          {collapsed ? "⏻" : "⏻  Sign out"}
-        </button>
-      </div>
+            {/* Board list */}
+            <div style={styles.section}>
+              <span style={styles.sectionLabel}>Your Boards</span>
+              {loading ? (
+                <div style={styles.loadingRow}>Loading…</div>
+              ) : (
+                <ul style={styles.list}>
+                  {boards.map((b) => (
+                    <li key={b.id}>
+                      <button
+                        style={{
+                          ...styles.boardItem,
+                          ...(b.id === activeBoardId
+                            ? styles.boardItemActive
+                            : {}),
+                        }}
+                        onClick={() => onSelectBoard(b.id)}
+                      >
+                        <span
+                          style={{
+                            ...styles.boardDot,
+                            background: b.prefs?.backgroundColor || "#0079bf",
+                          }}
+                        />
+                        <span style={styles.boardItemName}>{b.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Bottom: logout */}
+        <div style={styles.bottom}>
+          <button
+            style={styles.logoutBtn}
+            onClick={() => setShowLogoutConfirm(true)}
+            title="Sign out"
+          >
+            {collapsed ? "⏻" : "⏻  Sign out"}
+          </button>
+        </div>
+      </aside>
 
       {showLogoutConfirm && (
         <div
           style={styles.modalOverlay}
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowLogoutConfirm(false);
-          }}
+          onClick={() => setShowLogoutConfirm(false)}
         >
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>Sign Out</h3>
@@ -130,7 +129,7 @@ export default function Sidebar({
           </div>
         </div>
       )}
-    </aside>
+    </>
   );
 }
 
