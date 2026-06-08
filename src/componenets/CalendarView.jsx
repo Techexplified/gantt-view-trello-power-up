@@ -493,6 +493,7 @@ export default function CalendarView({
                   </select>
                   <button
                     onClick={handleCreateCard}
+                    style={styles.addCardBtn}
                     className="w-full rounded-lg bg-[#00d084] py-2 text-sm font-bold text-[#0d1117] hover:brightness-110"
                   >
                     Add card
@@ -632,5 +633,10 @@ const styles = {
     background: "rgba(255,255,255,0.25)",
     borderRadius: "0 4px 4px 0",
     pointerEvents: "all",
+  },
+  addCardBtn: {
+    background: "#00d084",
+    color: "#0d1117",
+    fontWeight: 700,
   },
 };
