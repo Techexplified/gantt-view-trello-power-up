@@ -63,6 +63,7 @@ export function authorizeWithTrello() {
         if (data && data.token) {
           window.removeEventListener("message", handler);
           clearInterval(pollTimer);
+          clearInterval(tokenPoll);
           storeToken(data.token);
           resolve(data.token);
         }
@@ -73,17 +74,34 @@ export function authorizeWithTrello() {
 
     window.addEventListener("message", handler);
 
+    const tokenPoll = setInterval(() => {
+      const token = getStoredToken();
+
+      if (token) {
+        clearInterval(tokenPoll);
+        clearInterval(pollTimer);
+        clearInterval(tokenPoll);
+        window.removeEventListener("message", handler);
+
+        try {
+          popup.close();
+        } catch (_) {}
+
+        resolve(token);
+      }
+    }, 300);
+
     // Fallback: poll localStorage in case postMessage doesn't fire
     // (e.g. the popup wrote directly to localStorage in auth.html)
     const pollTimer = setInterval(() => {
       if (popup.closed) {
         clearInterval(pollTimer);
+        clearInterval(tokenPoll);
         window.removeEventListener("message", handler);
 
-        const stored = localStorage.getItem("trello_token");
+        const stored = getStoredToken();
+
         if (stored) {
-          localStorage.removeItem("trello_token"); // clean up temp key
-          storeToken(stored);
           resolve(stored);
         } else {
           reject(new Error("Authorization cancelled."));

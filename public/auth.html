@@ -4,12 +4,15 @@
     <meta charset="UTF-8" />
     <title>Authorizing...</title>
 
+    <script src="/auth.js" defer></script>
+
     <style>
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+
       body {
         background: #0d1117;
         color: #e6edf3;
@@ -21,6 +24,7 @@
         flex-direction: column;
         gap: 16px;
       }
+
       .spinner {
         width: 40px;
         height: 40px;
@@ -29,79 +33,22 @@
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
+
       @keyframes spin {
         to {
           transform: rotate(360deg);
         }
       }
+
       p {
         color: #8b949e;
         font-size: 14px;
       }
     </style>
   </head>
+
   <body>
     <div class="spinner"></div>
-    <p>Completing authorization…</p>
-    <script>
-      // This page is opened by Trello's OAuth/token popup (t.popup({ url: ... })).
-      // We need to:
-      //  1. Pull the token out of the URL hash (robustly — tokens can contain '=').
-      //  2. Persist it somewhere the main iframe can read (localStorage, shared origin).
-      //  3. Tell Trello's SDK we're done via t.closePopup(), which is what actually
-      //     resolves the authorize() flow on the board side.
-      //  4. Fall back to postMessage + window.close() for safety.
-      (function () {
-        // Strip leading '#' then parse key=value pairs without breaking on
-        // '=' characters that may appear inside the token itself.
-        var hash = window.location.hash.replace(/^#/, "");
-        var params = {};
-        hash.split("&").forEach(function (pair) {
-          if (!pair) return;
-          var idx = pair.indexOf("=");
-          if (idx === -1) {
-            params[decodeURIComponent(pair)] = "";
-          } else {
-            var key = decodeURIComponent(pair.substring(0, idx));
-            var value = decodeURIComponent(pair.substring(idx + 1));
-            params[key] = value;
-          }
-        });
-
-        var token = params.token;
-
-        // Persist for the iframe (same-origin) to pick up if needed.
-        if (token) {
-          try {
-            localStorage.setItem("trello_token", token);
-          } catch (e) {
-            /* ignore storage errors */
-          }
-        }
-
-        // Best-effort: notify a window.open()-based opener too.
-        try {
-          if (window.opener) {
-            window.opener.postMessage(JSON.stringify({ token: token }), "*");
-          }
-        } catch (e) {
-          /* cross-origin opener access can throw; ignore */
-        }
-
-        // Primary mechanism: use the Trello Power-Up iframe SDK to close
-        // this popup. This is what actually resolves authorize() on the
-        // board/iframe side — without it Trello sees the popup as "stuck".
-
-        // Fallback for cases where this was opened as a plain window
-        // (not via t.popup()) and the SDK call above wasn't applicable.
-        setTimeout(function () {
-          try {
-            window.close();
-          } catch (e) {
-            /* nothing more we can do */
-          }
-        }, 300);
-      })();
-    </script>
+    <p id="status">Completing authorization...</p>
   </body>
 </html>
