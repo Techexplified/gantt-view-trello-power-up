@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Authorizing...</title>
-    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+
     <style>
       * {
         margin: 0;
@@ -91,30 +91,16 @@
         // Primary mechanism: use the Trello Power-Up iframe SDK to close
         // this popup. This is what actually resolves authorize() on the
         // board/iframe side — without it Trello sees the popup as "stuck".
-        var closed = false;
-        try {
-          if (window.TrelloPowerUp && window.TrelloPowerUp.iframe) {
-            var t = window.TrelloPowerUp.iframe();
-            if (t && typeof t.closePopup === "function") {
-              t.closePopup();
-              closed = true;
-            }
-          }
-        } catch (e) {
-          /* fall through to window.close() fallback */
-        }
 
         // Fallback for cases where this was opened as a plain window
         // (not via t.popup()) and the SDK call above wasn't applicable.
-        if (!closed) {
-          setTimeout(function () {
-            try {
-              window.close();
-            } catch (e) {
-              /* nothing more we can do */
-            }
-          }, 300);
-        }
+        setTimeout(function () {
+          try {
+            window.close();
+          } catch (e) {
+            /* nothing more we can do */
+          }
+        }, 300);
       })();
     </script>
   </body>
