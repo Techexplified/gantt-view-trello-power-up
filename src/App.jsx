@@ -20,7 +20,7 @@ export default function App() {
       }
     } catch (e) {
       // Not inside a Trello iframe (e.g. dev mode) — boardId stays null
-      console.warn("Not running inside Trello iframe:", e.message);
+      // console.warn("Not running inside Trello iframe:", e.message);
     }
   }, []);
 

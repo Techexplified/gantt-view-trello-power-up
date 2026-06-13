@@ -165,7 +165,7 @@ export default function CardModal({
       setBoardLabels(labels);
       setMe(meData);
     } catch (e) {
-      console.error(e);
+      // console.error(e);
     } finally {
       setLoading(false);
     }
@@ -183,7 +183,7 @@ export default function CardModal({
       setCard(updated);
       onCardUpdated && onCardUpdated(updated);
     } catch (e) {
-      console.error(e);
+      // console.error(e);
     } finally {
       setSaving(false);
     }
@@ -251,7 +251,7 @@ export default function CardModal({
       setCommentText("");
       loadCard();
     } catch (e) {
-      console.error(e);
+      // console.error(e);
     } finally {
       setSubmittingComment(false);
     }
@@ -276,7 +276,7 @@ export default function CardModal({
       await updateCard(card.id, { start: "", due: "" });
       onCardUpdated();
     } catch (err) {
-      console.error("Failed to remove card from calendar:", err);
+      // console.error("Failed to remove card from calendar:", err);
     }
   };
 

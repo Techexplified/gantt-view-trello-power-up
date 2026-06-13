@@ -17,7 +17,7 @@ export default function Sidebar({
   useEffect(() => {
     getMyBoards()
       .then(setBoards)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 

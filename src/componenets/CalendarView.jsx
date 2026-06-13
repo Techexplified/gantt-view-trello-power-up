@@ -210,7 +210,7 @@ export default function CalendarView({
         });
         onCardUpdated && onCardUpdated(externalCardId, isoDate, isoDate);
       } catch (err) {
-        console.error("Failed to set dates on drop:", err);
+        // console.error("Failed to set dates on drop:", err);
       }
       lastDragKey.current = null;
       return; // don't fall through to resize logic
@@ -232,7 +232,7 @@ export default function CalendarView({
       await updateCard(dragging.cardId, { due: snapped.toISOString() });
       onCardUpdated && onCardUpdated(dragging.cardId, snapped.toISOString());
     } catch (e) {
-      console.error("Failed to update due date:", e);
+      // console.error("Failed to update due date:", e);
     }
   };
 
@@ -263,7 +263,7 @@ export default function CalendarView({
       setCreateCardPopup(null);
       setNewCardTitle("");
     } catch (err) {
-      console.error(err);
+      // console.error(err);
     }
   };
 

@@ -151,7 +151,7 @@ function AddCardRow({ listId, onCardCreated }) {
       setTitle("");
       setOpen(false);
     } catch (e) {
-      console.error("Failed to create card:", e);
+      // console.error("Failed to create card:", e);
     } finally {
       setSaving(false);
     }
