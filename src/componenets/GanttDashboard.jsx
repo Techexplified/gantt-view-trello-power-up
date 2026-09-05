@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import CalendarView from "./CalendarView";
+import TimelineView from "./TimelineView";
 import RightPanel from "./RightPanel";
 import CardModal from "./CardModal";
 import { useBoardData } from "../hooks/useBoardData";
@@ -8,6 +9,7 @@ import { useBoardData } from "../hooks/useBoardData";
 export default function GanttDashboard({ initialBoardId, onLogout }) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
   const [selectedCard, setSelectedCard] = useState(null);
+  const [view, setView] = useState("calendar"); // "calendar" | "timeline"
   const {
     board,
     lists,
@@ -30,6 +32,8 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
         activeBoardId={activeBoardId}
         onSelectBoard={setActiveBoardId}
         onLogout={onLogout}
+        view={view}
+        onViewChange={setView}
       />
 
       {/* ── Main Calendar ── */}
@@ -40,6 +44,12 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
           <LoadingState />
         ) : error ? (
           <ErrorState message={error} />
+        ) : view === "timeline" ? (
+          <TimelineView
+            cards={cards}
+            lists={lists}
+            onCardClick={setSelectedCard}
+          />
         ) : (
           <CalendarView
             cards={cards}
@@ -65,8 +75,8 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
         )}
       </main>
 
-      {/* ── Right Panel ── */}
-      {activeBoardId && !loading && !error && (
+      {/* ── Right Panel (Calendar view only — Timeline has its own two-pane layout) ── */}
+      {activeBoardId && !loading && !error && view === "calendar" && (
         <RightPanel
           lists={lists}
           cards={cards}

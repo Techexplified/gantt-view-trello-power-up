@@ -8,6 +8,8 @@ export default function Sidebar({
   activeBoardId,
   onSelectBoard,
   onLogout,
+  view = "calendar",
+  onViewChange,
 }) {
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,28 @@ export default function Sidebar({
 
         {!collapsed && (
           <>
+            {/* View switcher: Calendar / Timeline */}
+            <div style={styles.viewToggleWrap}>
+              <button
+                style={{
+                  ...styles.viewToggleBtn,
+                  ...(view === "calendar" ? styles.viewToggleBtnActive : {}),
+                }}
+                onClick={() => onViewChange && onViewChange("calendar")}
+              >
+                Calendar
+              </button>
+              <button
+                style={{
+                  ...styles.viewToggleBtn,
+                  ...(view === "timeline" ? styles.viewToggleBtnActive : {}),
+                }}
+                onClick={() => onViewChange && onViewChange("timeline")}
+              >
+                Timeline
+              </button>
+            </div>
+
             {/* Active board name */}
             {board && (
               <div style={styles.activeBoard}>
@@ -193,6 +217,30 @@ const styles = {
     padding: "2px 6px",
     borderRadius: 4,
     lineHeight: 1,
+  },
+  viewToggleWrap: {
+    display: "flex",
+    gap: 4,
+    margin: "12px 12px 4px",
+    padding: 3,
+    background: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+  },
+  viewToggleBtn: {
+    flex: 1,
+    background: "none",
+    border: "none",
+    color: "#8b949e",
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "6px 0",
+    borderRadius: 6,
+    cursor: "pointer",
+    transition: "background 0.15s, color 0.15s",
+  },
+  viewToggleBtnActive: {
+    background: "rgba(0,208,132,0.15)",
+    color: "#00d084",
   },
   activeBoard: {
     padding: "14px 16px",
