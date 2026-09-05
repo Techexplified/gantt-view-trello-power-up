@@ -39,3 +39,4 @@ export default function App() {
 
   return <GanttDashboard initialBoardId={boardId} onLogout={handleLogout} />;
 }
+//test
