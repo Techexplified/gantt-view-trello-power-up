@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   addDays,
   format,
@@ -8,15 +8,7 @@ import {
 } from "date-fns";
 import { getCard } from "../utils/trelloApi";
 
-// Total number of days rendered in the scrollable strip (scroll range).
-const TOTAL_DAYS = 60;
-// How many day-columns are visible in the viewport at once (adjustable via +/-).
-const DEFAULT_VISIBLE_DAYS = 10;
-const MIN_VISIBLE_DAYS = 3;
-const MAX_VISIBLE_DAYS = 25;
-
-const HEADER_H = 40;
-const ROW_H = 46;
+const WINDOW_DAYS = 30;
 
 const CARD_COLORS = [
   "#0079bf",
@@ -84,11 +76,9 @@ const STATUS_META = {
 export default function TimelineView({ cards = [], lists = [], onCardClick }) {
   const today = useMemo(() => startOfDay(new Date()), []);
   const days = useMemo(
-    () => Array.from({ length: TOTAL_DAYS }, (_, i) => addDays(today, i)),
+    () => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(today, i)),
     [today],
   );
-
-  const [visibleDays, setVisibleDays] = useState(DEFAULT_VISIBLE_DAYS);
 
   // Only cards with a due date are shown on the timeline.
   const timelineCards = useMemo(
@@ -136,42 +126,8 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardIdsKey]);
 
-  // Keep left (card list) and right (timeline grid) vertical scroll in sync.
-  const leftBodyRef = useRef(null);
-  const rightBodyRef = useRef(null);
-  const skipLeftSync = useRef(false);
-  const skipRightSync = useRef(false);
-
-  const handleLeftScroll = (e) => {
-    if (skipLeftSync.current) {
-      skipLeftSync.current = false;
-      return;
-    }
-    if (rightBodyRef.current) {
-      skipRightSync.current = true;
-      rightBodyRef.current.scrollTop = e.target.scrollTop;
-    }
-  };
-
-  const handleRightScroll = (e) => {
-    if (skipRightSync.current) {
-      skipRightSync.current = false;
-      return;
-    }
-    if (leftBodyRef.current) {
-      skipLeftSync.current = true;
-      leftBodyRef.current.scrollTop = e.target.scrollTop;
-    }
-    // ignore horizontal (only vertical needs to sync; left has no horizontal scroll)
-  };
-
-  const zoomIn = () =>
-    setVisibleDays((v) => Math.min(MAX_VISIBLE_DAYS, v + 1)); // "+" → more days visible
-  const zoomOut = () =>
-    setVisibleDays((v) => Math.max(MIN_VISIBLE_DAYS, v - 1)); // "−" → fewer days visible
-
-  const contentWidthPct = (TOTAL_DAYS / visibleDays) * 100;
-  const minBarWidthPct = 100 / TOTAL_DAYS;
+  const ROW_H = 46;
+  const MIN_WIDTH_PCT = 100 / WINDOW_DAYS;
 
   return (
     <div style={styles.wrapper}>
@@ -181,8 +137,7 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
           <span style={styles.title}>Timeline</span>
           <span style={styles.subtitle}>
             {format(today, "MMM d")} –{" "}
-            {format(addDays(today, TOTAL_DAYS - 1), "MMM d, yyyy")} · showing{" "}
-            {visibleDays} days at a time
+            {format(addDays(today, WINDOW_DAYS - 1), "MMM d, yyyy")}
           </span>
         </div>
         <span style={styles.countBadge}>
@@ -200,239 +155,175 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
           </p>
         </div>
       ) : (
-        <div style={styles.body}>
-          {/* ── Left pane: card list (vertical scroll only) ── */}
-          <div style={styles.leftPane}>
+        <div style={styles.scrollArea}>
+          {/* Header row */}
+          <div style={{ ...styles.row, ...styles.headerRow }}>
             <div style={styles.leftHeaderCell}>Card</div>
-            <div
-              ref={leftBodyRef}
-              onScroll={handleLeftScroll}
-              style={styles.leftScrollBody}
-            >
-              {timelineCards.map((card) => {
-                const color = listColor(card.idList, lists);
-                const progress = progressMap[card.id];
-                const status = getStatus(card, progress);
-                const meta = STATUS_META[status];
-                return (
-                  <div
-                    key={card.id}
-                    style={{ ...styles.leftCell, minHeight: ROW_H }}
-                    className="hover:bg-white/5 transition-colors duration-150"
-                    onClick={() => onCardClick && onCardClick(card)}
-                  >
-                    <span
-                      style={{ ...styles.listDot, background: color }}
-                    />
-                    <div style={styles.leftCellText}>
-                      <span style={styles.cardName} title={card.name}>
-                        {card.name}
-                      </span>
-                      <span style={styles.dueText}>
-                        Due {format(new Date(card.due), "MMM d")}
-                        {card.start &&
-                          ` · Start ${format(new Date(card.start), "MMM d")}`}
-                      </span>
-                    </div>
-                    <span
-                      style={{
-                        ...styles.statusBadge,
-                        color: meta.color,
-                        background: meta.bg,
-                        border: `1px solid ${meta.border}`,
-                      }}
-                    >
-                      {meta.icon} {meta.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── Right pane: scrollable date strip + bars ── */}
-          <div style={styles.rightPane}>
-            <div
-              ref={rightBodyRef}
-              onScroll={handleRightScroll}
-              style={styles.rightScrollBody}
-            >
-              <div style={{ width: `${contentWidthPct}%`, minWidth: "100%" }}>
-                {/* Date header — sticky vertically, scrolls horizontally with content */}
-                <div style={styles.dateHeaderRow}>
-                  <div
-                    style={{
-                      ...styles.dayGrid,
-                      gridTemplateColumns: `repeat(${TOTAL_DAYS}, 1fr)`,
-                    }}
-                  >
-                    {days.map((d) => {
-                      const todayCol = isToday(d);
-                      const isMonthStart = d.getDate() === 1;
-                      return (
-                        <div
-                          key={d.toISOString()}
-                          style={{
-                            ...styles.dayHeaderCell,
-                            ...(todayCol ? styles.dayHeaderCellToday : {}),
-                            ...(isMonthStart ? styles.monthBorder : {}),
-                          }}
-                        >
-                          {isMonthStart && (
-                            <span style={styles.monthLabel}>
-                              {format(d, "MMM")}
-                            </span>
-                          )}
-                          <span style={styles.dayLetter}>
-                            {format(d, "EEEEE")}
-                          </span>
-                          <span style={styles.dayNum}>{format(d, "d")}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Card rows */}
-                {timelineCards.map((card) => {
-                  const color = listColor(card.idList, lists);
-
-                  const dueDate = startOfDay(new Date(card.due));
-                  const startDate = card.start
-                    ? startOfDay(new Date(card.start))
-                    : dueDate;
-
-                  const rawStartOffset = differenceInCalendarDays(
-                    startDate,
-                    today,
-                  );
-                  const rawEndOffsetExclusive =
-                    differenceInCalendarDays(dueDate, today) + 1;
-
-                  const isOverdue = rawEndOffsetExclusive <= 0;
-                  const isFuture = rawStartOffset >= TOTAL_DAYS;
-
-                  const startOffset = Math.max(
-                    0,
-                    Math.min(TOTAL_DAYS, rawStartOffset),
-                  );
-                  const endOffset = Math.max(
-                    0,
-                    Math.min(TOTAL_DAYS, rawEndOffsetExclusive),
-                  );
-
-                  const leftPct = (startOffset / TOTAL_DAYS) * 100;
-                  const widthPct = Math.max(
-                    ((endOffset - startOffset) / TOTAL_DAYS) * 100,
-                    minBarWidthPct,
-                  );
-
-                  const meta =
-                    STATUS_META[getStatus(card, progressMap[card.id])];
-
+            <div style={styles.rightCell}>
+              <div
+                style={{
+                  ...styles.dayGrid,
+                  gridTemplateColumns: `repeat(${WINDOW_DAYS}, 1fr)`,
+                }}
+              >
+                {days.map((d) => {
+                  const todayCol = isToday(d);
+                  const isMonthStart = d.getDate() === 1;
                   return (
                     <div
-                      key={card.id}
-                      style={{ ...styles.gridRow, minHeight: ROW_H }}
+                      key={d.toISOString()}
+                      style={{
+                        ...styles.dayHeaderCell,
+                        ...(todayCol ? styles.dayHeaderCellToday : {}),
+                        ...(isMonthStart ? styles.monthBorder : {}),
+                      }}
                     >
-                      <div
-                        style={{
-                          ...styles.dayGrid,
-                          gridTemplateColumns: `repeat(${TOTAL_DAYS}, 1fr)`,
-                          position: "absolute",
-                          inset: 0,
-                        }}
-                      >
-                        {days.map((d) => (
-                          <div
-                            key={d.toISOString()}
-                            style={{
-                              ...styles.dayBodyCell,
-                              ...(isToday(d) ? styles.dayBodyCellToday : {}),
-                            }}
-                          />
-                        ))}
-                      </div>
-
-                      {isOverdue ? (
-                        <div
-                          style={{
-                            ...styles.edgeChip,
-                            left: 6,
-                            borderColor: meta.color,
-                            color: meta.color,
-                          }}
-                          onClick={() => onCardClick && onCardClick(card)}
-                          title={`Overdue since ${format(new Date(card.due), "MMM d, yyyy")}`}
-                        >
-                          ◀ Overdue
-                        </div>
-                      ) : isFuture ? (
-                        <div
-                          style={{
-                            ...styles.edgeChip,
-                            right: 6,
-                            borderColor: color,
-                            color,
-                          }}
-                          onClick={() => onCardClick && onCardClick(card)}
-                          title={`Starts ${format(startDate, "MMM d, yyyy")}`}
-                        >
-                          Starts {format(startDate, "MMM d")} ▶
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            ...styles.bar,
-                            left: `${leftPct}%`,
-                            width: `${widthPct}%`,
-                            background: color + "33",
-                            borderLeft: `3px solid ${color}`,
-                          }}
-                          className="hover:brightness-125 transition-all duration-150"
-                          onClick={() => onCardClick && onCardClick(card)}
-                          title={card.name}
-                        >
-                          <span style={styles.barText}>{card.name}</span>
-                        </div>
+                      {isMonthStart && (
+                        <span style={styles.monthLabel}>
+                          {format(d, "MMM")}
+                        </span>
                       )}
+                      <span style={styles.dayLetter}>{format(d, "EEEEE")}</span>
+                      <span style={styles.dayNum}>{format(d, "d")}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
-
-            {/* Floating zoom controls */}
-            <div style={styles.zoomControls}>
-              <button
-                style={{
-                  ...styles.zoomBtn,
-                  ...(visibleDays >= MAX_VISIBLE_DAYS
-                    ? styles.zoomBtnDisabled
-                    : {}),
-                }}
-                onClick={zoomIn}
-                disabled={visibleDays >= MAX_VISIBLE_DAYS}
-                title="Show more days"
-              >
-                +
-              </button>
-              <div style={styles.zoomDivider} />
-              <button
-                style={{
-                  ...styles.zoomBtn,
-                  ...(visibleDays <= MIN_VISIBLE_DAYS
-                    ? styles.zoomBtnDisabled
-                    : {}),
-                }}
-                onClick={zoomOut}
-                disabled={visibleDays <= MIN_VISIBLE_DAYS}
-                title="Show fewer days"
-              >
-                −
-              </button>
-            </div>
           </div>
+
+          {/* Card rows */}
+          {timelineCards.map((card) => {
+            const color = listColor(card.idList, lists);
+            const progress = progressMap[card.id];
+            const status = getStatus(card, progress);
+            const meta = STATUS_META[status];
+
+            const dueDate = startOfDay(new Date(card.due));
+            const startDate = card.start
+              ? startOfDay(new Date(card.start))
+              : dueDate;
+
+            const rawStartOffset = differenceInCalendarDays(startDate, today);
+            const rawEndOffsetExclusive =
+              differenceInCalendarDays(dueDate, today) + 1;
+
+            const isOverdue = rawEndOffsetExclusive <= 0;
+            const isFuture = rawStartOffset >= WINDOW_DAYS;
+
+            const startOffset = Math.max(
+              0,
+              Math.min(WINDOW_DAYS, rawStartOffset),
+            );
+            const endOffset = Math.max(
+              0,
+              Math.min(WINDOW_DAYS, rawEndOffsetExclusive),
+            );
+
+            const leftPct = (startOffset / WINDOW_DAYS) * 100;
+            const widthPct = Math.max(
+              ((endOffset - startOffset) / WINDOW_DAYS) * 100,
+              MIN_WIDTH_PCT,
+            );
+
+            return (
+              <div key={card.id} style={{ ...styles.row, minHeight: ROW_H }}>
+                {/* ── Left: card info ── */}
+                <div
+                  style={styles.leftCell}
+                  className="hover:bg-white/5 transition-colors duration-150"
+                  onClick={() => onCardClick && onCardClick(card)}
+                >
+                  <span style={{ ...styles.listDot, background: color }} />
+                  <div style={styles.leftCellText}>
+                    <span style={styles.cardName} title={card.name}>
+                      {card.name}
+                    </span>
+                    <span style={styles.dueText}>
+                      Due {format(new Date(card.due), "MMM d")}
+                      {card.start &&
+                        ` · Start ${format(new Date(card.start), "MMM d")}`}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      ...styles.statusBadge,
+                      color: meta.color,
+                      background: meta.bg,
+                      border: `1px solid ${meta.border}`,
+                    }}
+                  >
+                    {meta.icon} {meta.label}
+                  </span>
+                </div>
+
+                {/* ── Right: timeline bar ── */}
+                <div style={styles.rightCell}>
+                  <div
+                    style={{
+                      ...styles.dayGrid,
+                      gridTemplateColumns: `repeat(${WINDOW_DAYS}, 1fr)`,
+                      position: "absolute",
+                      inset: 0,
+                    }}
+                  >
+                    {days.map((d) => (
+                      <div
+                        key={d.toISOString()}
+                        style={{
+                          ...styles.dayBodyCell,
+                          ...(isToday(d) ? styles.dayBodyCellToday : {}),
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {isOverdue ? (
+                    <div
+                      style={{
+                        ...styles.edgeChip,
+                        left: 6,
+                        borderColor: meta.color,
+                        color: meta.color,
+                      }}
+                      onClick={() => onCardClick && onCardClick(card)}
+                      title={`Overdue since ${format(new Date(card.due), "MMM d, yyyy")}`}
+                    >
+                      ◀ Overdue
+                    </div>
+                  ) : isFuture ? (
+                    <div
+                      style={{
+                        ...styles.edgeChip,
+                        right: 6,
+                        borderColor: color,
+                        color,
+                      }}
+                      onClick={() => onCardClick && onCardClick(card)}
+                      title={`Starts ${format(startDate, "MMM d, yyyy")}`}
+                    >
+                      Starts {format(startDate, "MMM d")} ▶
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        ...styles.bar,
+                        left: `${leftPct}%`,
+                        width: `${widthPct}%`,
+                        background: color + "33",
+                        borderLeft: `3px solid ${color}`,
+                      }}
+                      className="hover:brightness-125 transition-all duration-150"
+                      onClick={() => onCardClick && onCardClick(card)}
+                      title={card.name}
+                    >
+                      <span style={styles.barText}>{card.name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -456,7 +347,6 @@ const styles = {
     padding: "12px 20px",
     borderBottom: "1px solid rgba(255,255,255,0.07)",
     background: "#1a1f2e",
-    flexShrink: 0,
   },
   toolbarLeft: {
     display: "flex",
@@ -478,52 +368,45 @@ const styles = {
     fontSize: 11,
     borderRadius: 20,
     padding: "3px 10px",
-    whiteSpace: "nowrap",
   },
-  body: {
+  scrollArea: {
     flex: 1,
+    overflowY: "auto",
+    overflowX: "hidden",
+  },
+  row: {
     display: "flex",
     flexDirection: "row",
-    minHeight: 0,
-    overflow: "hidden",
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
   },
-
-  /* Left pane */
-  leftPane: {
+  headerRow: {
+    position: "sticky",
+    top: 0,
+    zIndex: 5,
+    background: "#1a1f2e",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+  },
+  leftHeaderCell: {
     width: 300,
     minWidth: 300,
     flexShrink: 0,
-    display: "flex",
-    flexDirection: "column",
-    borderRight: "1px solid rgba(255,255,255,0.07)",
-    minHeight: 0,
-  },
-  leftHeaderCell: {
-    height: HEADER_H,
-    minHeight: HEADER_H,
-    display: "flex",
-    alignItems: "center",
-    padding: "0 16px",
+    padding: "10px 16px",
     color: "#484f58",
     fontSize: 11,
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.6px",
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
-    flexShrink: 0,
-  },
-  leftScrollBody: {
-    flex: 1,
-    overflowY: "auto",
-    overflowX: "hidden",
-    minHeight: 0,
+    borderRight: "1px solid rgba(255,255,255,0.07)",
   },
   leftCell: {
+    width: 300,
+    minWidth: 300,
+    flexShrink: 0,
     display: "flex",
     alignItems: "center",
     gap: 10,
     padding: "8px 16px",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
+    borderRight: "1px solid rgba(255,255,255,0.07)",
     cursor: "pointer",
     boxSizing: "border-box",
   },
@@ -563,28 +446,10 @@ const styles = {
     whiteSpace: "nowrap",
     flexShrink: 0,
   },
-
-  /* Right pane */
-  rightPane: {
+  rightCell: {
     flex: 1,
     position: "relative",
-    minWidth: 0,
-    minHeight: 0,
-    display: "flex",
-  },
-  rightScrollBody: {
-    flex: 1,
-    overflow: "auto",
-    minHeight: 0,
-    minWidth: 0,
-  },
-  dateHeaderRow: {
-    position: "sticky",
-    top: 0,
-    zIndex: 5,
-    background: "#1a1f2e",
-    height: HEADER_H,
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    minHeight: "100%",
   },
   dayGrid: {
     display: "grid",
@@ -625,10 +490,6 @@ const styles = {
     color: "#8b949e",
     fontSize: 11,
     fontWeight: 600,
-  },
-  gridRow: {
-    position: "relative",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
   },
   dayBodyCell: {
     borderRight: "1px solid rgba(255,255,255,0.04)",
@@ -675,42 +536,6 @@ const styles = {
     whiteSpace: "nowrap",
     zIndex: 2,
   },
-
-  /* Floating zoom controls */
-  zoomControls: {
-    position: "absolute",
-    bottom: 14,
-    right: 14,
-    display: "flex",
-    flexDirection: "column",
-    background: "rgba(20,25,35,0.92)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 8,
-    overflow: "hidden",
-    zIndex: 10,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
-  },
-  zoomBtn: {
-    width: 28,
-    height: 28,
-    background: "none",
-    border: "none",
-    color: "#e6edf3",
-    fontSize: 16,
-    fontWeight: 700,
-    cursor: "pointer",
-    lineHeight: "28px",
-    padding: 0,
-  },
-  zoomBtnDisabled: {
-    color: "#484f58",
-    cursor: "not-allowed",
-  },
-  zoomDivider: {
-    height: 1,
-    background: "rgba(255,255,255,0.12)",
-  },
-
   emptyWrap: {
     flex: 1,
     display: "flex",
