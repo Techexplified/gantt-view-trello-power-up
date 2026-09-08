@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   addDays,
   format,
@@ -8,7 +14,22 @@ import {
 } from "date-fns";
 import { getCard } from "../utils/trelloApi";
 
-const WINDOW_DAYS = 30;
+// Initial window: some days behind "today" already loaded so scrolling back
+// feels instant, plus a chunk ahead. Both directions grow automatically
+// as the user scrolls near either edge.
+const INITIAL_DAYS_BACK = 15;
+const INITIAL_DAYS_FORWARD = 45;
+const CHUNK_DAYS = 15; // how many extra days to load per edge-trigger
+const MAX_DAYS_BACK = 120;
+const MAX_DAYS_FORWARD = 180;
+const EDGE_PX = 120; // trigger loading more when within this many px of an edge
+
+const DEFAULT_VISIBLE_DAYS = 10;
+const MIN_VISIBLE_DAYS = 3;
+const MAX_VISIBLE_DAYS = 25;
+
+const HEADER_H = 40;
+const ROW_H = 46;
 
 const CARD_COLORS = [
   "#0079bf",
@@ -75,9 +96,19 @@ const STATUS_META = {
 
 export default function TimelineView({ cards = [], lists = [], onCardClick }) {
   const today = useMemo(() => startOfDay(new Date()), []);
+
+  const [daysBack, setDaysBack] = useState(INITIAL_DAYS_BACK);
+  const [daysForward, setDaysForward] = useState(INITIAL_DAYS_FORWARD);
+  const [visibleDays, setVisibleDays] = useState(DEFAULT_VISIBLE_DAYS);
+
+  const totalDays = daysBack + daysForward;
+  const rangeStart = useMemo(
+    () => addDays(today, -daysBack),
+    [today, daysBack],
+  );
   const days = useMemo(
-    () => Array.from({ length: WINDOW_DAYS }, (_, i) => addDays(today, i)),
-    [today],
+    () => Array.from({ length: totalDays }, (_, i) => addDays(rangeStart, i)),
+    [rangeStart, totalDays],
   );
 
   // Only cards with a due date are shown on the timeline.
@@ -126,18 +157,131 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardIdsKey]);
 
-  const ROW_H = 46;
-  const MIN_WIDTH_PCT = 100 / WINDOW_DAYS;
+  // ── Refs for the three moving parts: left list, right body, right header ──
+  const leftBodyRef = useRef(null);
+  const rightBodyRef = useRef(null);
+  const headerWrapRef = useRef(null);
+
+  const skipLeftSync = useRef(false);
+  const skipRightSync = useRef(false);
+  const pendingExtend = useRef(null); // "back" | "forward" | null
+  const prevScrollWidth = useRef(0);
+  const pendingZoomFrom = useRef(null); // previous visibleDays while a zoom is settling
+  const didInitScroll = useRef(false);
+
+  const handleLeftScroll = (e) => {
+    if (skipLeftSync.current) {
+      skipLeftSync.current = false;
+      return;
+    }
+    if (rightBodyRef.current) {
+      skipRightSync.current = true;
+      rightBodyRef.current.scrollTop = e.target.scrollTop;
+    }
+  };
+
+  const handleRightScroll = (e) => {
+    const el = e.target;
+
+    // Vertical: keep left card list lined up with the timeline rows.
+    if (skipRightSync.current) {
+      skipRightSync.current = false;
+    } else if (leftBodyRef.current) {
+      skipLeftSync.current = true;
+      leftBodyRef.current.scrollTop = el.scrollTop;
+    }
+
+    // Horizontal: drag the (non-scrolling) date header along with the body.
+    if (headerWrapRef.current) {
+      headerWrapRef.current.scrollLeft = el.scrollLeft;
+    }
+
+    // Infinite-scroll: grow the date range when nearing either edge.
+    if (!pendingExtend.current) {
+      if (el.scrollLeft < EDGE_PX && daysBack < MAX_DAYS_BACK) {
+        pendingExtend.current = "back";
+        prevScrollWidth.current = el.scrollWidth;
+        setDaysBack((d) => Math.min(MAX_DAYS_BACK, d + CHUNK_DAYS));
+      } else if (
+        el.scrollWidth - el.scrollLeft - el.clientWidth < EDGE_PX &&
+        daysForward < MAX_DAYS_FORWARD
+      ) {
+        pendingExtend.current = "forward";
+        setDaysForward((d) => Math.min(MAX_DAYS_FORWARD, d + CHUNK_DAYS));
+      }
+    }
+  };
+
+  // After prepending days at the back, compensate scrollLeft so the view
+  // doesn't visually jump (the content grew to the left of the viewport).
+  useLayoutEffect(() => {
+    if (pendingExtend.current === "back" && rightBodyRef.current) {
+      const el = rightBodyRef.current;
+      const diff = el.scrollWidth - prevScrollWidth.current;
+      el.scrollLeft += diff;
+      if (headerWrapRef.current)
+        headerWrapRef.current.scrollLeft = el.scrollLeft;
+    }
+    pendingExtend.current = null;
+  }, [daysBack, daysForward]);
+
+  // On first load, scroll so "today" sits at the left edge of the viewport.
+  useEffect(() => {
+    if (
+      !didInitScroll.current &&
+      timelineCards.length > 0 &&
+      rightBodyRef.current
+    ) {
+      const el = rightBodyRef.current;
+      const colWidth = el.clientWidth / visibleDays;
+      const initial = daysBack * colWidth;
+      el.scrollLeft = initial;
+      if (headerWrapRef.current) headerWrapRef.current.scrollLeft = initial;
+      didInitScroll.current = true;
+    }
+  });
+
+  // Keep the left-most visible date stable when zooming in/out.
+  useLayoutEffect(() => {
+    if (pendingZoomFrom.current != null && rightBodyRef.current) {
+      const el = rightBodyRef.current;
+      const oldV = pendingZoomFrom.current;
+      const newScrollLeft = el.scrollLeft * (oldV / visibleDays);
+      el.scrollLeft = newScrollLeft;
+      if (headerWrapRef.current)
+        headerWrapRef.current.scrollLeft = newScrollLeft;
+      pendingZoomFrom.current = null;
+    }
+  }, [visibleDays]);
+
+  const zoomIn = () =>
+    setVisibleDays((v) => {
+      if (v >= MAX_VISIBLE_DAYS) return v;
+      pendingZoomFrom.current = v;
+      return v + 1;
+    }); // "+" → more days visible
+  const zoomOut = () =>
+    setVisibleDays((v) => {
+      if (v <= MIN_VISIBLE_DAYS) return v;
+      pendingZoomFrom.current = v;
+      return v - 1;
+    }); // "−" → fewer days visible
+
+  const contentWidthPct = (totalDays / visibleDays) * 100;
+  const minBarWidthPct = 100 / totalDays;
 
   return (
     <div style={styles.wrapper}>
+      <style>{`.tf-hide-scrollbar::-webkit-scrollbar{display:none}.tf-hide-scrollbar{scrollbar-width:none;-ms-overflow-style:none}`}</style>
+
       {/* Toolbar */}
       <div style={styles.toolbar}>
         <div style={styles.toolbarLeft}>
           <span style={styles.title}>Timeline</span>
           <span style={styles.subtitle}>
-            {format(today, "MMM d")} –{" "}
-            {format(addDays(today, WINDOW_DAYS - 1), "MMM d, yyyy")}
+            {format(rangeStart, "MMM d")} –{" "}
+            {format(addDays(rangeStart, totalDays - 1), "MMM d, yyyy")} ·
+            showing {visibleDays} days at a time
           </span>
         </div>
         <span style={styles.countBadge}>
@@ -155,175 +299,244 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
           </p>
         </div>
       ) : (
-        <div style={styles.scrollArea}>
-          {/* Header row */}
-          <div style={{ ...styles.row, ...styles.headerRow }}>
+        <div style={styles.body}>
+          {/* ── Left pane: card list (vertical scroll only, scrollbar hidden — driven by the right pane) ── */}
+          <div style={styles.leftPane}>
             <div style={styles.leftHeaderCell}>Card</div>
-            <div style={styles.rightCell}>
-              <div
-                style={{
-                  ...styles.dayGrid,
-                  gridTemplateColumns: `repeat(${WINDOW_DAYS}, 1fr)`,
-                }}
-              >
-                {days.map((d) => {
-                  const todayCol = isToday(d);
-                  const isMonthStart = d.getDate() === 1;
-                  return (
-                    <div
-                      key={d.toISOString()}
+            <div
+              ref={leftBodyRef}
+              onScroll={handleLeftScroll}
+              className="tf-hide-scrollbar"
+              style={styles.leftScrollBody}
+            >
+              {timelineCards.map((card) => {
+                const color = listColor(card.idList, lists);
+                const progress = progressMap[card.id];
+                const status = getStatus(card, progress);
+                const meta = STATUS_META[status];
+                return (
+                  <div
+                    key={card.id}
+                    style={{ ...styles.leftCell, minHeight: ROW_H }}
+                    className="hover:bg-white/5 transition-colors duration-150"
+                    onClick={() => onCardClick && onCardClick(card)}
+                  >
+                    <span style={{ ...styles.listDot, background: color }} />
+                    <div style={styles.leftCellText}>
+                      <span style={styles.cardName} title={card.name}>
+                        {card.name}
+                      </span>
+                      <span style={styles.dueText}>
+                        Due {format(new Date(card.due), "MMM d")}
+                        {card.start &&
+                          ` · Start ${format(new Date(card.start), "MMM d")}`}
+                      </span>
+                    </div>
+                    <span
                       style={{
-                        ...styles.dayHeaderCell,
-                        ...(todayCol ? styles.dayHeaderCellToday : {}),
-                        ...(isMonthStart ? styles.monthBorder : {}),
+                        ...styles.statusBadge,
+                        color: meta.color,
+                        background: meta.bg,
+                        border: `1px solid ${meta.border}`,
                       }}
                     >
-                      {isMonthStart && (
-                        <span style={styles.monthLabel}>
-                          {format(d, "MMM")}
+                      {meta.icon} {meta.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Right pane: fixed header strip + scrollable body, kept in sync ── */}
+          <div style={styles.rightPane}>
+            {/* Date header — NOT independently scrollable; mirrors the body's scrollLeft */}
+            <div
+              ref={headerWrapRef}
+              className="tf-hide-scrollbar"
+              style={styles.headerWrap}
+            >
+              <div style={{ width: `${contentWidthPct}%` }}>
+                <div
+                  style={{
+                    ...styles.dayGrid,
+                    gridTemplateColumns: `repeat(${totalDays}, 1fr)`,
+                  }}
+                >
+                  {days.map((d) => {
+                    const todayCol = isToday(d);
+                    const isMonthStart = d.getDate() === 1;
+                    return (
+                      <div
+                        key={d.toISOString()}
+                        style={{
+                          ...styles.dayHeaderCell,
+                          ...(todayCol ? styles.dayHeaderCellToday : {}),
+                          ...(isMonthStart ? styles.monthBorder : {}),
+                        }}
+                      >
+                        {isMonthStart && (
+                          <span style={styles.monthLabel}>
+                            {format(d, "MMM")}
+                          </span>
+                        )}
+                        <span style={styles.dayLetter}>
+                          {format(d, "EEEEE")}
                         </span>
+                        <span style={styles.dayNum}>{format(d, "d")}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable body — the ONE visible scrollbar, both axes */}
+            <div
+              ref={rightBodyRef}
+              onScroll={handleRightScroll}
+              style={styles.rightScrollBody}
+            >
+              <div style={{ width: `${contentWidthPct}%` }}>
+                {timelineCards.map((card) => {
+                  const color = listColor(card.idList, lists);
+
+                  const dueDate = startOfDay(new Date(card.due));
+                  const startDate = card.start
+                    ? startOfDay(new Date(card.start))
+                    : dueDate;
+
+                  const rawStartOffset = differenceInCalendarDays(
+                    startDate,
+                    rangeStart,
+                  );
+                  const rawEndOffsetExclusive =
+                    differenceInCalendarDays(dueDate, rangeStart) + 1;
+
+                  const isOverdue = rawEndOffsetExclusive <= 0;
+                  const isFuture = rawStartOffset >= totalDays;
+
+                  const startOffset = Math.max(
+                    0,
+                    Math.min(totalDays, rawStartOffset),
+                  );
+                  const endOffset = Math.max(
+                    0,
+                    Math.min(totalDays, rawEndOffsetExclusive),
+                  );
+
+                  const leftPct = (startOffset / totalDays) * 100;
+                  const widthPct = Math.max(
+                    ((endOffset - startOffset) / totalDays) * 100,
+                    minBarWidthPct,
+                  );
+
+                  const meta =
+                    STATUS_META[getStatus(card, progressMap[card.id])];
+
+                  return (
+                    <div
+                      key={card.id}
+                      style={{ ...styles.gridRow, minHeight: ROW_H }}
+                    >
+                      <div
+                        style={{
+                          ...styles.dayGrid,
+                          gridTemplateColumns: `repeat(${totalDays}, 1fr)`,
+                          position: "absolute",
+                          inset: 0,
+                        }}
+                      >
+                        {days.map((d) => (
+                          <div
+                            key={d.toISOString()}
+                            style={{
+                              ...styles.dayBodyCell,
+                              ...(isToday(d) ? styles.dayBodyCellToday : {}),
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {isOverdue ? (
+                        <div
+                          style={{
+                            ...styles.edgeChip,
+                            left: 6,
+                            borderColor: meta.color,
+                            color: meta.color,
+                          }}
+                          onClick={() => onCardClick && onCardClick(card)}
+                          title={`Overdue since ${format(new Date(card.due), "MMM d, yyyy")}`}
+                        >
+                          ◀ Overdue
+                        </div>
+                      ) : isFuture ? (
+                        <div
+                          style={{
+                            ...styles.edgeChip,
+                            right: 6,
+                            borderColor: color,
+                            color,
+                          }}
+                          onClick={() => onCardClick && onCardClick(card)}
+                          title={`Starts ${format(startDate, "MMM d, yyyy")}`}
+                        >
+                          Starts {format(startDate, "MMM d")} ▶
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            ...styles.bar,
+                            left: `${leftPct}%`,
+                            width: `${widthPct}%`,
+                            background: color + "33",
+                            borderLeft: `3px solid ${color}`,
+                          }}
+                          className="hover:brightness-125 transition-all duration-150"
+                          onClick={() => onCardClick && onCardClick(card)}
+                          title={card.name}
+                        >
+                          <span style={styles.barText}>{card.name}</span>
+                        </div>
                       )}
-                      <span style={styles.dayLetter}>{format(d, "EEEEE")}</span>
-                      <span style={styles.dayNum}>{format(d, "d")}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
+
+            {/* Floating zoom controls */}
+            <div style={styles.zoomControls}>
+              <button
+                style={{
+                  ...styles.zoomBtn,
+                  ...(visibleDays >= MAX_VISIBLE_DAYS
+                    ? styles.zoomBtnDisabled
+                    : {}),
+                }}
+                onClick={zoomIn}
+                disabled={visibleDays >= MAX_VISIBLE_DAYS}
+                title="Show more days"
+              >
+                +
+              </button>
+              <div style={styles.zoomDivider} />
+              <button
+                style={{
+                  ...styles.zoomBtn,
+                  ...(visibleDays <= MIN_VISIBLE_DAYS
+                    ? styles.zoomBtnDisabled
+                    : {}),
+                }}
+                onClick={zoomOut}
+                disabled={visibleDays <= MIN_VISIBLE_DAYS}
+                title="Show fewer days"
+              >
+                −
+              </button>
+            </div>
           </div>
-
-          {/* Card rows */}
-          {timelineCards.map((card) => {
-            const color = listColor(card.idList, lists);
-            const progress = progressMap[card.id];
-            const status = getStatus(card, progress);
-            const meta = STATUS_META[status];
-
-            const dueDate = startOfDay(new Date(card.due));
-            const startDate = card.start
-              ? startOfDay(new Date(card.start))
-              : dueDate;
-
-            const rawStartOffset = differenceInCalendarDays(startDate, today);
-            const rawEndOffsetExclusive =
-              differenceInCalendarDays(dueDate, today) + 1;
-
-            const isOverdue = rawEndOffsetExclusive <= 0;
-            const isFuture = rawStartOffset >= WINDOW_DAYS;
-
-            const startOffset = Math.max(
-              0,
-              Math.min(WINDOW_DAYS, rawStartOffset),
-            );
-            const endOffset = Math.max(
-              0,
-              Math.min(WINDOW_DAYS, rawEndOffsetExclusive),
-            );
-
-            const leftPct = (startOffset / WINDOW_DAYS) * 100;
-            const widthPct = Math.max(
-              ((endOffset - startOffset) / WINDOW_DAYS) * 100,
-              MIN_WIDTH_PCT,
-            );
-
-            return (
-              <div key={card.id} style={{ ...styles.row, minHeight: ROW_H }}>
-                {/* ── Left: card info ── */}
-                <div
-                  style={styles.leftCell}
-                  className="hover:bg-white/5 transition-colors duration-150"
-                  onClick={() => onCardClick && onCardClick(card)}
-                >
-                  <span style={{ ...styles.listDot, background: color }} />
-                  <div style={styles.leftCellText}>
-                    <span style={styles.cardName} title={card.name}>
-                      {card.name}
-                    </span>
-                    <span style={styles.dueText}>
-                      Due {format(new Date(card.due), "MMM d")}
-                      {card.start &&
-                        ` · Start ${format(new Date(card.start), "MMM d")}`}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      ...styles.statusBadge,
-                      color: meta.color,
-                      background: meta.bg,
-                      border: `1px solid ${meta.border}`,
-                    }}
-                  >
-                    {meta.icon} {meta.label}
-                  </span>
-                </div>
-
-                {/* ── Right: timeline bar ── */}
-                <div style={styles.rightCell}>
-                  <div
-                    style={{
-                      ...styles.dayGrid,
-                      gridTemplateColumns: `repeat(${WINDOW_DAYS}, 1fr)`,
-                      position: "absolute",
-                      inset: 0,
-                    }}
-                  >
-                    {days.map((d) => (
-                      <div
-                        key={d.toISOString()}
-                        style={{
-                          ...styles.dayBodyCell,
-                          ...(isToday(d) ? styles.dayBodyCellToday : {}),
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  {isOverdue ? (
-                    <div
-                      style={{
-                        ...styles.edgeChip,
-                        left: 6,
-                        borderColor: meta.color,
-                        color: meta.color,
-                      }}
-                      onClick={() => onCardClick && onCardClick(card)}
-                      title={`Overdue since ${format(new Date(card.due), "MMM d, yyyy")}`}
-                    >
-                      ◀ Overdue
-                    </div>
-                  ) : isFuture ? (
-                    <div
-                      style={{
-                        ...styles.edgeChip,
-                        right: 6,
-                        borderColor: color,
-                        color,
-                      }}
-                      onClick={() => onCardClick && onCardClick(card)}
-                      title={`Starts ${format(startDate, "MMM d, yyyy")}`}
-                    >
-                      Starts {format(startDate, "MMM d")} ▶
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        ...styles.bar,
-                        left: `${leftPct}%`,
-                        width: `${widthPct}%`,
-                        background: color + "33",
-                        borderLeft: `3px solid ${color}`,
-                      }}
-                      className="hover:brightness-125 transition-all duration-150"
-                      onClick={() => onCardClick && onCardClick(card)}
-                      title={card.name}
-                    >
-                      <span style={styles.barText}>{card.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
     </div>
@@ -347,6 +560,7 @@ const styles = {
     padding: "12px 20px",
     borderBottom: "1px solid rgba(255,255,255,0.07)",
     background: "#1a1f2e",
+    flexShrink: 0,
   },
   toolbarLeft: {
     display: "flex",
@@ -368,45 +582,52 @@ const styles = {
     fontSize: 11,
     borderRadius: 20,
     padding: "3px 10px",
+    whiteSpace: "nowrap",
   },
-  scrollArea: {
+  body: {
     flex: 1,
-    overflowY: "auto",
-    overflowX: "hidden",
-  },
-  row: {
     display: "flex",
     flexDirection: "row",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
+    minHeight: 0,
+    overflow: "hidden",
   },
-  headerRow: {
-    position: "sticky",
-    top: 0,
-    zIndex: 5,
-    background: "#1a1f2e",
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
-  },
-  leftHeaderCell: {
+
+  /* Left pane */
+  leftPane: {
     width: 300,
     minWidth: 300,
     flexShrink: 0,
-    padding: "10px 16px",
+    display: "flex",
+    flexDirection: "column",
+    borderRight: "1px solid rgba(255,255,255,0.07)",
+    minHeight: 0,
+  },
+  leftHeaderCell: {
+    height: HEADER_H,
+    minHeight: HEADER_H,
+    display: "flex",
+    alignItems: "center",
+    padding: "0 16px",
     color: "#484f58",
     fontSize: 11,
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.6px",
-    borderRight: "1px solid rgba(255,255,255,0.07)",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    flexShrink: 0,
+  },
+  leftScrollBody: {
+    flex: 1,
+    overflowY: "auto",
+    overflowX: "hidden",
+    minHeight: 0,
   },
   leftCell: {
-    width: 300,
-    minWidth: 300,
-    flexShrink: 0,
     display: "flex",
     alignItems: "center",
     gap: 10,
     padding: "8px 16px",
-    borderRight: "1px solid rgba(255,255,255,0.07)",
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
     cursor: "pointer",
     boxSizing: "border-box",
   },
@@ -446,10 +667,29 @@ const styles = {
     whiteSpace: "nowrap",
     flexShrink: 0,
   },
-  rightCell: {
+
+  /* Right pane */
+  rightPane: {
     flex: 1,
     position: "relative",
-    minHeight: "100%",
+    minWidth: 0,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+  },
+  headerWrap: {
+    height: HEADER_H,
+    minHeight: HEADER_H,
+    flexShrink: 0,
+    overflow: "hidden",
+    background: "#1a1f2e",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+  },
+  rightScrollBody: {
+    flex: 1,
+    overflow: "auto",
+    minHeight: 0,
+    minWidth: 0,
   },
   dayGrid: {
     display: "grid",
@@ -490,6 +730,10 @@ const styles = {
     color: "#8b949e",
     fontSize: 11,
     fontWeight: 600,
+  },
+  gridRow: {
+    position: "relative",
+    borderBottom: "1px solid rgba(255,255,255,0.05)",
   },
   dayBodyCell: {
     borderRight: "1px solid rgba(255,255,255,0.04)",
@@ -536,6 +780,42 @@ const styles = {
     whiteSpace: "nowrap",
     zIndex: 2,
   },
+
+  /* Floating zoom controls */
+  zoomControls: {
+    position: "absolute",
+    bottom: 14,
+    right: 14,
+    display: "flex",
+    flexDirection: "column",
+    background: "rgba(20,25,35,0.92)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 8,
+    overflow: "hidden",
+    zIndex: 10,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+  },
+  zoomBtn: {
+    width: 28,
+    height: 28,
+    background: "none",
+    border: "none",
+    color: "#e6edf3",
+    fontSize: 16,
+    fontWeight: 700,
+    cursor: "pointer",
+    lineHeight: "28px",
+    padding: 0,
+  },
+  zoomBtnDisabled: {
+    color: "#484f58",
+    cursor: "not-allowed",
+  },
+  zoomDivider: {
+    height: 1,
+    background: "rgba(255,255,255,0.12)",
+  },
+
   emptyWrap: {
     flex: 1,
     display: "flex",
