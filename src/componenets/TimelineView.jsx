@@ -272,7 +272,7 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
 
   return (
     <div style={styles.wrapper}>
-      <style>{`.tf-hide-scrollbar::-webkit-scrollbar{display:none}.tf-hide-scrollbar{scrollbar-width:none;-ms-overflow-style:none}`}</style>
+      <style>{`.tf-hide-scrollbar::-webkit-scrollbar{display:none}.tf-hide-scrollbar{scrollbar-width:none;-ms-overflow-style:none}.tf-ghost-hscroll::-webkit-scrollbar-track{background:transparent}.tf-ghost-hscroll::-webkit-scrollbar-thumb{background:transparent}.tf-ghost-hscroll{scrollbar-color:transparent transparent}`}</style>
 
       {/* Toolbar */}
       <div style={styles.toolbar}>
@@ -306,7 +306,7 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
             <div
               ref={leftBodyRef}
               onScroll={handleLeftScroll}
-              className="tf-hide-scrollbar"
+              className="tf-ghost-hscroll"
               style={styles.leftScrollBody}
             >
               {timelineCards.map((card) => {
@@ -619,7 +619,16 @@ const styles = {
   leftScrollBody: {
     flex: 1,
     overflowY: "auto",
-    overflowX: "hidden",
+    // "scroll" (not "hidden"/"auto") forces this pane to always reserve a
+    // horizontal-scrollbar-height strip at the bottom, same as the right
+    // pane always does (its content is wider than the viewport). Content
+    // here never actually overflows horizontally, so nothing scrolls — the
+    // .tf-ghost-hscroll class just makes that reserved strip invisible.
+    // Without this, the left list's viewport was a few px taller than the
+    // right timeline's, so their scroll ranges didn't quite match and the
+    // two panes drifted out of sync (grid lines ending up above their
+    // cards) once you scrolled from the right/calendar side to the bottom.
+    overflowX: "scroll",
     minHeight: 0,
   },
   leftCell: {
