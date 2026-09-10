@@ -30,6 +30,14 @@ const MAX_VISIBLE_DAYS = 25;
 
 const HEADER_H = 40;
 const ROW_H = 46;
+const MILESTONE_ROW_H = 56;
+
+// localStorage key: milestones aren't real Trello cards, so they're kept
+// per-board in localStorage (this app talks straight to the Trello REST
+// API rather than the Power-Up client SDK, so there's no t.set() storage
+// available here).
+const milestonesKey = (boardId) =>
+  `taskflow_milestones_${boardId || "default"}`;
 
 const CARD_COLORS = [
   "#0079bf",
@@ -94,12 +102,66 @@ const STATUS_META = {
   },
 };
 
-export default function TimelineView({ cards = [], lists = [], onCardClick }) {
+export default function TimelineView({
+  cards = [],
+  lists = [],
+  onCardClick,
+  boardId = null,
+}) {
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const [daysBack, setDaysBack] = useState(INITIAL_DAYS_BACK);
   const [daysForward, setDaysForward] = useState(INITIAL_DAYS_FORWARD);
   const [visibleDays, setVisibleDays] = useState(DEFAULT_VISIBLE_DAYS);
+
+  // ── Milestones (persisted per-board in localStorage) ──────────────────────
+  const [milestones, setMilestones] = useState([]);
+  // { dateKey: "yyyy-MM-dd", step: "confirm" | "input", value: string } | null
+  const [milestonePopover, setMilestonePopover] = useState(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(milestonesKey(boardId));
+      setMilestones(raw ? JSON.parse(raw) : []);
+    } catch {
+      setMilestones([]);
+    }
+    setMilestonePopover(null);
+  }, [boardId]);
+
+  const persistMilestones = (next) => {
+    setMilestones(next);
+    try {
+      localStorage.setItem(milestonesKey(boardId), JSON.stringify(next));
+    } catch {
+      /* localStorage unavailable — milestone still holds for this session */
+    }
+  };
+
+  const openAddMilestone = (dateKey) =>
+    setMilestonePopover({ dateKey, step: "confirm", value: "" });
+
+  const confirmAddMilestone = () =>
+    setMilestonePopover((p) => (p ? { ...p, step: "input" } : p));
+
+  const submitMilestone = () => {
+    setMilestonePopover((p) => {
+      const name = p?.value.trim();
+      if (!name) return p;
+      persistMilestones([
+        ...milestones,
+        {
+          id: `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          date: p.dateKey,
+          name,
+        },
+      ]);
+      return null;
+    });
+  };
+
+  const removeMilestone = (id) =>
+    persistMilestones(milestones.filter((m) => m.id !== id));
 
   const totalDays = daysBack + daysForward;
   const rangeStart = useMemo(
@@ -271,7 +333,10 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
   const minBarWidthPct = 100 / totalDays;
 
   return (
-    <div style={styles.wrapper}>
+    <div
+      style={styles.wrapper}
+      onClick={() => milestonePopover && setMilestonePopover(null)}
+    >
       <style>{`.tf-hide-scrollbar::-webkit-scrollbar{display:none}.tf-hide-scrollbar{scrollbar-width:none;-ms-overflow-style:none}.tf-ghost-hscroll::-webkit-scrollbar-track{background:transparent}.tf-ghost-hscroll::-webkit-scrollbar-thumb{background:transparent}.tf-ghost-hscroll{scrollbar-color:transparent transparent}`}</style>
 
       {/* Toolbar */}
@@ -290,7 +355,7 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
         </span>
       </div>
 
-      {timelineCards.length === 0 ? (
+      {timelineCards.length === 0 && milestones.length === 0 ? (
         <div style={styles.emptyWrap}>
           <div style={styles.emptyIcon}>🗓️</div>
           <h3 style={styles.emptyTitle}>No cards with due dates</h3>
@@ -309,6 +374,26 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
               className="tf-ghost-hscroll"
               style={styles.leftScrollBody}
             >
+              <div style={{ ...styles.leftCell, height: MILESTONE_ROW_H }}>
+                <span style={styles.milestoneRowIcon}>◆</span>
+                <div style={styles.leftCellText}>
+                  <span style={styles.cardName}>Key Milestones</span>
+                  <span style={styles.dueText}>
+                    {milestones.length} milestone
+                    {milestones.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <button
+                  style={styles.addMilestoneChip}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openAddMilestone(format(today, "yyyy-MM-dd"));
+                  }}
+                  title="Add a milestone on today's date"
+                >
+                  + Add
+                </button>
+              </div>
               {timelineCards.map((card) => {
                 const color = listColor(card.idList, lists);
                 const progress = progressMap[card.id];
@@ -398,6 +483,132 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
               style={styles.rightScrollBody}
             >
               <div style={{ width: `${contentWidthPct}%` }}>
+                {/* ── Key Milestones row ── */}
+                <div style={{ ...styles.gridRow, height: MILESTONE_ROW_H }}>
+                  <div
+                    style={{
+                      ...styles.dayGrid,
+                      gridTemplateColumns: `repeat(${totalDays}, 1fr)`,
+                      position: "absolute",
+                      inset: 0,
+                    }}
+                  >
+                    {days.map((d) => {
+                      const dateKey = format(d, "yyyy-MM-dd");
+                      const dayMilestones = milestones.filter(
+                        (m) => m.date === dateKey,
+                      );
+                      const isOpen = milestonePopover?.dateKey === dateKey;
+                      return (
+                        <div
+                          key={dateKey}
+                          style={{
+                            ...styles.dayBodyCell,
+                            ...styles.milestoneDayCell,
+                            ...(isToday(d) ? styles.dayBodyCellToday : {}),
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAddMilestone(dateKey);
+                          }}
+                        >
+                          {dayMilestones.map((m) => (
+                            <div
+                              key={m.id}
+                              style={styles.milestoneMarker}
+                              title={m.name}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span style={styles.milestoneDiamond}>◆</span>
+                              <span style={styles.milestoneChip}>
+                                {m.name}
+                                <button
+                                  style={styles.milestoneRemoveBtn}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeMilestone(m.id);
+                                  }}
+                                  title="Remove milestone"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            </div>
+                          ))}
+
+                          {isOpen && (
+                            <div
+                              style={styles.milestonePopover}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {milestonePopover.step === "confirm" ? (
+                                <button
+                                  style={styles.addMilestoneBtn}
+                                  onClick={confirmAddMilestone}
+                                  autoFocus
+                                >
+                                  ◆ Add Milestone
+                                </button>
+                              ) : (
+                                <form
+                                  style={styles.milestoneForm}
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    submitMilestone();
+                                  }}
+                                >
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Milestone name"
+                                    value={milestonePopover.value}
+                                    maxLength={60}
+                                    onChange={(e) =>
+                                      setMilestonePopover((p) => ({
+                                        ...p,
+                                        value: e.target.value,
+                                      }))
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape")
+                                        setMilestonePopover(null);
+                                    }}
+                                    style={styles.milestoneInput}
+                                  />
+                                  <div style={styles.milestoneFormActions}>
+                                    <button
+                                      type="submit"
+                                      style={{
+                                        ...styles.milestoneConfirmBtn,
+                                        ...(!milestonePopover.value.trim()
+                                          ? {
+                                              opacity: 0.5,
+                                              cursor: "not-allowed",
+                                            }
+                                          : {}),
+                                      }}
+                                      disabled={!milestonePopover.value.trim()}
+                                    >
+                                      Add
+                                    </button>
+                                    <button
+                                      type="button"
+                                      style={styles.milestoneCancelBtn}
+                                      onClick={() => setMilestonePopover(null)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {timelineCards.map((card) => {
                   const color = listColor(card.idList, lists);
 
@@ -825,6 +1036,147 @@ const styles = {
   zoomDivider: {
     height: 1,
     background: "rgba(255,255,255,0.12)",
+  },
+
+  /* Key Milestones row — left pane */
+  milestoneRowIcon: {
+    width: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#e2b93b",
+    fontSize: 13,
+    flexShrink: 0,
+  },
+  addMilestoneChip: {
+    background: "rgba(226,185,59,0.15)",
+    border: "1px solid rgba(226,185,59,0.45)",
+    color: "#e2b93b",
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: 600,
+    padding: "4px 9px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+
+  /* Key Milestones row — right (timeline) pane */
+  milestoneDayCell: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    cursor: "pointer",
+  },
+  milestoneMarker: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+    zIndex: 2,
+    cursor: "default",
+  },
+  milestoneDiamond: {
+    color: "#e2b93b",
+    fontSize: 14,
+    lineHeight: 1,
+  },
+  milestoneChip: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    background: "rgba(226,185,59,0.18)",
+    border: "1px solid rgba(226,185,59,0.5)",
+    color: "#e2b93b",
+    fontSize: 10.5,
+    fontWeight: 700,
+    borderRadius: 20,
+    padding: "2px 6px 2px 8px",
+    whiteSpace: "nowrap",
+    maxWidth: 140,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  milestoneRemoveBtn: {
+    background: "none",
+    border: "none",
+    color: "#e2b93b",
+    fontSize: 12,
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: 0,
+    marginLeft: 2,
+  },
+
+  /* Add-milestone popover */
+  milestonePopover: {
+    position: "absolute",
+    top: "100%",
+    marginTop: 6,
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "#1e2432",
+    border: "1px solid rgba(255,255,255,0.15)",
+    borderRadius: 10,
+    padding: 8,
+    boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+    zIndex: 20,
+    cursor: "default",
+  },
+  addMilestoneBtn: {
+    background: "rgba(226,185,59,0.18)",
+    border: "1px solid rgba(226,185,59,0.5)",
+    color: "#e2b93b",
+    borderRadius: 8,
+    padding: "7px 12px",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  milestoneForm: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    minWidth: 170,
+  },
+  milestoneInput: {
+    background: "#141924",
+    border: "1px solid rgba(255,255,255,0.15)",
+    borderRadius: 6,
+    color: "#e6edf3",
+    fontSize: 12,
+    padding: "7px 9px",
+    outline: "none",
+  },
+  milestoneFormActions: {
+    display: "flex",
+    gap: 6,
+  },
+  milestoneConfirmBtn: {
+    flex: 1,
+    background: "#e2b93b",
+    border: "none",
+    color: "#1a1f2e",
+    borderRadius: 6,
+    padding: "6px 0",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  milestoneCancelBtn: {
+    flex: 1,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "#c9d1d9",
+    borderRadius: 6,
+    padding: "6px 0",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
   },
 
   emptyWrap: {

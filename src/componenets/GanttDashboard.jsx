@@ -49,6 +49,7 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             cards={cards}
             lists={lists}
             onCardClick={setSelectedCard}
+            boardId={activeBoardId}
           />
         ) : (
           <CalendarView
