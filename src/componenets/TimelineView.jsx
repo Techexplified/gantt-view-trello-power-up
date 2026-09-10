@@ -317,7 +317,7 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
                 return (
                   <div
                     key={card.id}
-                    style={{ ...styles.leftCell, minHeight: ROW_H }}
+                    style={{ ...styles.leftCell, height: ROW_H }}
                     className="hover:bg-white/5 transition-colors duration-150"
                     onClick={() => onCardClick && onCardClick(card)}
                   >
@@ -437,7 +437,7 @@ export default function TimelineView({ cards = [], lists = [], onCardClick }) {
                   return (
                     <div
                       key={card.id}
-                      style={{ ...styles.gridRow, minHeight: ROW_H }}
+                      style={{ ...styles.gridRow, height: ROW_H }}
                     >
                       <div
                         style={{
@@ -630,6 +630,7 @@ const styles = {
     borderBottom: "1px solid rgba(255,255,255,0.05)",
     cursor: "pointer",
     boxSizing: "border-box",
+    overflow: "hidden",
   },
   listDot: {
     width: 8,
@@ -734,6 +735,7 @@ const styles = {
   gridRow: {
     position: "relative",
     borderBottom: "1px solid rgba(255,255,255,0.05)",
+    boxSizing: "border-box",
   },
   dayBodyCell: {
     borderRight: "1px solid rgba(255,255,255,0.04)",
