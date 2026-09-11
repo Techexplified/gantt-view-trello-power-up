@@ -37,6 +37,7 @@ window.TrelloPowerUp.initialize(
               title: "TaskFlow",
               url: BASE_URL + "/index.html",
               fullscreen: true,
+              accentColor: "#00d084",
             });
           },
         },
