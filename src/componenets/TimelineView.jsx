@@ -224,6 +224,29 @@ export default function TimelineView({
   const rightBodyRef = useRef(null);
   const headerWrapRef = useRef(null);
 
+  // The date header (headerWrap) has its scrollbar hidden and never shows one,
+  // while the body below it (rightScrollBody) shows a real vertical scrollbar
+  // whenever the rows overflow. That scrollbar eats into the body's available
+  // width, so its day columns render a little narrower than the header's —
+  // the grid lines drift out of alignment with the header's date dividers,
+  // worse the further right you look. Measuring the browser's actual
+  // scrollbar width and reserving the same space in the header (padding) —
+  // while always reserving it in the body too, via overflowY:"scroll" instead
+  // of "auto" — keeps both grids exactly the same width at all times.
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
+  useEffect(() => {
+    const outer = document.createElement("div");
+    outer.style.visibility = "hidden";
+    outer.style.position = "absolute";
+    outer.style.top = "-9999px";
+    outer.style.overflow = "scroll";
+    document.body.appendChild(outer);
+    const inner = document.createElement("div");
+    outer.appendChild(inner);
+    setScrollbarWidth(outer.offsetWidth - inner.offsetWidth);
+    document.body.removeChild(outer);
+  }, []);
+
   const skipLeftSync = useRef(false);
   const skipRightSync = useRef(false);
   const pendingExtend = useRef(null); // "back" | "forward" | null
@@ -439,7 +462,7 @@ export default function TimelineView({
             <div
               ref={headerWrapRef}
               className="tf-hide-scrollbar"
-              style={styles.headerWrap}
+              style={{ ...styles.headerWrap, paddingRight: scrollbarWidth }}
             >
               <div style={{ width: `${contentWidthPct}%` }}>
                 <div
@@ -908,7 +931,12 @@ const styles = {
   },
   rightScrollBody: {
     flex: 1,
-    overflow: "auto",
+    overflowX: "auto",
+    // overflowY is forced to "scroll" (not "auto") inline where this style is
+    // used, so the vertical scrollbar gutter is always reserved — see the
+    // scrollbarWidth comment above for why that must stay in sync with the
+    // header's padding.
+    overflowY: "scroll",
     minHeight: 0,
     minWidth: 0,
   },
@@ -928,7 +956,7 @@ const styles = {
     gap: 1,
   },
   dayHeaderCellToday: {
-    background: "rgba(0,208,132,0.08)",
+    background: "rgba(255,255,255,0.07)",
   },
   monthBorder: {
     borderLeft: "1px solid rgba(255,255,255,0.15)",
@@ -962,7 +990,7 @@ const styles = {
     height: "100%",
   },
   dayBodyCellToday: {
-    background: "rgba(0,208,132,0.06)",
+    background: "rgba(255,255,255,0.045)",
   },
   bar: {
     position: "absolute",
