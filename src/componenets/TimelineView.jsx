@@ -118,6 +118,9 @@ export default function TimelineView({
   const [milestones, setMilestones] = useState([]);
   // { dateKey: "yyyy-MM-dd", step: "confirm" | "input", value: string } | null
   const [milestonePopover, setMilestonePopover] = useState(null);
+  // id of the single milestone diamond currently expanded to show its name
+  // + remove button (only ever one at a time).
+  const [viewingMilestoneId, setViewingMilestoneId] = useState(null);
 
   useEffect(() => {
     try {
@@ -127,6 +130,7 @@ export default function TimelineView({
       setMilestones([]);
     }
     setMilestonePopover(null);
+    setViewingMilestoneId(null);
   }, [boardId]);
 
   const persistMilestones = (next) => {
@@ -138,8 +142,15 @@ export default function TimelineView({
     }
   };
 
-  const openAddMilestone = (dateKey) =>
+  const openAddMilestone = (dateKey) => {
+    setViewingMilestoneId(null);
     setMilestonePopover({ dateKey, step: "confirm", value: "" });
+  };
+
+  const toggleViewMilestone = (id) => {
+    setMilestonePopover(null);
+    setViewingMilestoneId((current) => (current === id ? null : id));
+  };
 
   const confirmAddMilestone = () =>
     setMilestonePopover((p) => (p ? { ...p, step: "input" } : p));
@@ -160,8 +171,10 @@ export default function TimelineView({
     });
   };
 
-  const removeMilestone = (id) =>
+  const removeMilestone = (id) => {
     persistMilestones(milestones.filter((m) => m.id !== id));
+    setViewingMilestoneId((current) => (current === id ? null : current));
+  };
 
   const totalDays = daysBack + daysForward;
   const rangeStart = useMemo(
@@ -358,7 +371,10 @@ export default function TimelineView({
   return (
     <div
       style={styles.wrapper}
-      onClick={() => milestonePopover && setMilestonePopover(null)}
+      onClick={() => {
+        if (milestonePopover) setMilestonePopover(null);
+        if (viewingMilestoneId) setViewingMilestoneId(null);
+      }}
     >
       <style>{`.tf-hide-scrollbar::-webkit-scrollbar{display:none}.tf-hide-scrollbar{scrollbar-width:none;-ms-overflow-style:none}.tf-ghost-hscroll::-webkit-scrollbar-track{background:transparent}.tf-ghost-hscroll::-webkit-scrollbar-thumb{background:transparent}.tf-ghost-hscroll{scrollbar-color:transparent transparent}`}</style>
 
@@ -535,29 +551,47 @@ export default function TimelineView({
                             openAddMilestone(dateKey);
                           }}
                         >
-                          {dayMilestones.map((m) => (
-                            <div
-                              key={m.id}
-                              style={styles.milestoneMarker}
-                              title={m.name}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <span style={styles.milestoneDiamond}>◆</span>
-                              <span style={styles.milestoneChip}>
-                                {m.name}
+                          {dayMilestones.map((m) => {
+                            const isViewing = viewingMilestoneId === m.id;
+                            return (
+                              <div
+                                key={m.id}
+                                style={styles.milestoneMarker}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleViewMilestone(m.id);
+                                }}
+                              >
                                 <button
-                                  style={styles.milestoneRemoveBtn}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeMilestone(m.id);
-                                  }}
-                                  title="Remove milestone"
+                                  style={styles.milestoneDiamondBtn}
+                                  title={m.name}
                                 >
-                                  ×
+                                  ◆
                                 </button>
-                              </span>
-                            </div>
-                          ))}
+
+                                {isViewing && (
+                                  <div
+                                    style={styles.milestoneViewPopover}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <span style={styles.milestoneViewName}>
+                                      {m.name}
+                                    </span>
+                                    <button
+                                      style={styles.milestoneRemoveBtn}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeMilestone(m.id);
+                                      }}
+                                      title="Remove milestone"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
 
                           {isOpen && (
                             <div
@@ -1093,50 +1127,76 @@ const styles = {
   milestoneDayCell: {
     position: "relative",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 4,
     cursor: "pointer",
   },
+  // Wraps one diamond button + its (conditional) view popover. Fixed size —
+  // never grows with the milestone name, so it can never push the day-cell
+  // grid lines around regardless of how long the name is.
   milestoneMarker: {
+    position: "relative",
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
-    gap: 2,
+    justifyContent: "center",
     zIndex: 2,
-    cursor: "default",
   },
-  milestoneDiamond: {
-    color: "#e2b93b",
-    fontSize: 14,
-    lineHeight: 1,
-  },
-  milestoneChip: {
+  milestoneDiamondBtn: {
+    width: 18,
+    height: 18,
     display: "flex",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    background: "rgba(226,185,59,0.18)",
+    border: "1px solid rgba(226,185,59,0.5)",
+    borderRadius: 4,
+    color: "#e2b93b",
+    fontSize: 11,
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: 0,
+    flexShrink: 0,
+  },
+  // Floating popover shown when a diamond is clicked — name + remove button.
+  // Positioned absolutely so its width never affects the grid underneath it,
+  // no matter how long the milestone name is.
+  milestoneViewPopover: {
+    position: "absolute",
+    top: "100%",
+    marginTop: 6,
+    left: "50%",
+    transform: "translateX(-50%)",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
     background: "rgba(226,185,59,0.18)",
     border: "1px solid rgba(226,185,59,0.5)",
     color: "#e2b93b",
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: 700,
-    borderRadius: 20,
-    padding: "2px 6px 2px 8px",
-    whiteSpace: "nowrap",
-    maxWidth: 140,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+    borderRadius: 8,
+    padding: "5px 6px 5px 10px",
+    maxWidth: 220,
+    boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+    zIndex: 21,
+    cursor: "default",
+  },
+  milestoneViewName: {
+    whiteSpace: "normal",
+    wordBreak: "break-word",
   },
   milestoneRemoveBtn: {
     background: "none",
     border: "none",
     color: "#e2b93b",
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 1,
     cursor: "pointer",
     padding: 0,
-    marginLeft: 2,
+    flexShrink: 0,
   },
 
   /* Add-milestone popover */
