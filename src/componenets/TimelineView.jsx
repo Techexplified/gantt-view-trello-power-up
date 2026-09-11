@@ -1179,6 +1179,12 @@ const styles = {
     fontWeight: 700,
     borderRadius: 8,
     padding: "5px 6px 5px 10px",
+    // minWidth matters here, not just maxWidth: this popover's containing
+    // block is the 18px diamond button it's anchored to, so with left:50%
+    // the browser has almost no "available width" to size it against and
+    // will otherwise collapse it down to a sliver, wrapping the name one
+    // character per line. An explicit minWidth overrides that.
+    minWidth: 140,
     maxWidth: 220,
     boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
     zIndex: 21,
