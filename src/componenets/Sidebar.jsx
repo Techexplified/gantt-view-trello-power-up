@@ -72,14 +72,6 @@ export default function Sidebar({
               </button>
             </div>
 
-            {/* Active board name */}
-            {board && (
-              <div style={styles.activeBoard}>
-                <span style={styles.activeBoardLabel}>Current board</span>
-                <span style={styles.activeBoardName}>{board.name}</span>
-              </div>
-            )}
-
             {/* Board list */}
             <div style={styles.section}>
               <span style={styles.sectionLabel}>Your Boards</span>
@@ -241,27 +233,6 @@ const styles = {
   viewToggleBtnActive: {
     background: "rgba(0,208,132,0.15)",
     color: "#00d084",
-  },
-  activeBoard: {
-    padding: "14px 16px",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
-  },
-  activeBoardLabel: {
-    display: "block",
-    fontSize: 10,
-    color: "#484f58",
-    textTransform: "uppercase",
-    letterSpacing: "0.8px",
-    marginBottom: 4,
-  },
-  activeBoardName: {
-    display: "block",
-    color: "#00d084",
-    fontWeight: 700,
-    fontSize: 14,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
   },
   section: {
     flex: 1,
