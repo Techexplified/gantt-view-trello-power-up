@@ -1191,6 +1191,8 @@ const styles = {
     cursor: "default",
   },
   milestoneViewName: {
+    flex: 1,
+    minWidth: 0,
     whiteSpace: "normal",
     wordBreak: "break-word",
   },
