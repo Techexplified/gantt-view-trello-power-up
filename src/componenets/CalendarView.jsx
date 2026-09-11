@@ -15,7 +15,7 @@ import {
   differenceInCalendarDays,
 } from "date-fns";
 import { createCardWithDates, updateCard } from "../utils/trelloApi";
-import { X, Clock, Sparkles } from "lucide-react";
+import { X } from "lucide-react";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -290,17 +290,7 @@ export default function CalendarView({
             ›
           </button>
         </div>
-        <div style={styles.toolbarRight}>
-          <div style={styles.trialBadge}>
-            <Clock size={12} style={{ flexShrink: 0 }} />
-            <span>14-Day Trial: 9 days remaining</span>
-          </div>
-          <button style={styles.upgradeBtn}>
-            <Sparkles size={14} style={{ flexShrink: 0 }} />
-            <span>Upgrade to Premium</span>
-            <span style={{ marginLeft: 2 }}>→</span>
-          </button>
-        </div>
+        <div />
       </div>
 
       {/* ── Day-of-week headers ── */}
@@ -539,34 +529,6 @@ const styles = {
     zIndex: 10,
   },
   toolbarLeft: { display: "flex", alignItems: "center", gap: 8 },
-  toolbarRight: { display: "flex", alignItems: "center", gap: 10 },
-  trialBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    background: "rgba(226,159,59,0.12)",
-    border: "1px solid rgba(226,159,59,0.4)",
-    color: "#e2a93b",
-    borderRadius: 8,
-    padding: "6px 12px",
-    fontSize: 12,
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  },
-  upgradeBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    background: "linear-gradient(135deg, #7c5cff, #5b3df0)",
-    border: "none",
-    color: "#fff",
-    borderRadius: 8,
-    padding: "8px 14px",
-    fontSize: 12.5,
-    fontWeight: 700,
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
   navBtn: {
     background: "none",
     border: "1px solid rgba(255,255,255,0.1)",
