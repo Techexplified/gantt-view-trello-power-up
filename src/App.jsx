@@ -2,16 +2,15 @@ import React, { useState, useEffect } from "react";
 import LoginScreen from "./componenets/LoginScreen";
 import GanttDashboard from "./componenets/GanttDashboard";
 import { getStoredToken, clearToken } from "./utils/auth";
+import { getMe } from "./utils/api";
 
 export default function App() {
-  // Check if user already has a token stored from a previous session
   const [token, setToken] = useState(() => getStoredToken());
   const [boardId, setBoardId] = useState(null);
+  const [planStatus, setPlanStatus] = useState(null); // ← new
 
-  // Try to read the boardId from the Trello Power-Up context (when opened via board-button)
   useEffect(() => {
     try {
-      // When running inside a Trello iframe, TrelloPowerUp is available globally
       if (window.TrelloPowerUp) {
         const t = window.TrelloPowerUp.iframe();
         t.board("id").then((board) => {
@@ -19,24 +18,41 @@ export default function App() {
         });
       }
     } catch (e) {
-      // Not inside a Trello iframe (e.g. dev mode) — boardId stays null
-      // console.warn("Not running inside Trello iframe:", e.message);
+      /* not inside Trello iframe */
     }
   }, []);
 
-  const handleAuth = (newToken) => {
-    setToken(newToken);
-  };
+  // Runs on first mount (if already logged in) and every time `token` changes
+  // (i.e. right after a fresh sign-in) — this is what creates the Mongo
+  // profile and starts the 7-day trial on first-ever call.
+  useEffect(() => {
+    if (!token) return;
+    getMe()
+      .then(setPlanStatus)
+      .catch((err) => {
+        console.error("Failed to sync with backend:", err);
+        // token might be stale/revoked — bounce back to login
+        clearToken();
+        setToken(null);
+      });
+  }, [token]);
 
+  const handleAuth = (newToken) => setToken(newToken);
   const handleLogout = () => {
     clearToken();
     setToken(null);
+    setPlanStatus(null);
   };
 
   if (!token) {
     return <LoginScreen onAuth={handleAuth} />;
   }
 
-  return <GanttDashboard initialBoardId={boardId} onLogout={handleLogout} />;
+  return (
+    <GanttDashboard
+      initialBoardId={boardId}
+      onLogout={handleLogout}
+      planStatus={planStatus} // ← GanttDashboard can now read isActive/isTrialActive/trialEndsAt
+    />
+  );
 }
-//test
