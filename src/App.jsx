@@ -7,7 +7,7 @@ import { getMe } from "./utils/api";
 export default function App() {
   const [token, setToken] = useState(() => getStoredToken());
   const [boardId, setBoardId] = useState(null);
-  const [planStatus, setPlanStatus] = useState(null); // ← new
+  const [planStatus, setPlanStatus] = useState(null);
 
   useEffect(() => {
     try {
@@ -18,20 +18,16 @@ export default function App() {
         });
       }
     } catch (e) {
-      /* not inside Trello iframe */
+      // Not inside a Trello iframe (e.g. dev mode)
     }
   }, []);
 
-  // Runs on first mount (if already logged in) and every time `token` changes
-  // (i.e. right after a fresh sign-in) — this is what creates the Mongo
-  // profile and starts the 7-day trial on first-ever call.
   useEffect(() => {
     if (!token) return;
     getMe()
       .then(setPlanStatus)
       .catch((err) => {
         console.error("Failed to sync with backend:", err);
-        // token might be stale/revoked — bounce back to login
         clearToken();
         setToken(null);
       });
@@ -52,7 +48,7 @@ export default function App() {
     <GanttDashboard
       initialBoardId={boardId}
       onLogout={handleLogout}
-      planStatus={planStatus} // ← GanttDashboard can now read isActive/isTrialActive/trialEndsAt
+      planStatus={planStatus}
     />
   );
 }

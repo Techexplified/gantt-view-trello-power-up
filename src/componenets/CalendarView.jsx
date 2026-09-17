@@ -15,6 +15,7 @@ import {
   differenceInCalendarDays,
 } from "date-fns";
 import { createCardWithDates, updateCard } from "../utils/trelloApi";
+import PricingModal from "./PricingModal";
 import { X, Clock, Sparkles } from "lucide-react";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -127,6 +128,7 @@ export default function CalendarView({
   onCardClick,
   onCardUpdated,
   onCardCreated,
+  planStatus,
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const days = getCalendarDays(currentDate);
@@ -138,6 +140,15 @@ export default function CalendarView({
   const [newCardTitle, setNewCardTitle] = useState("");
   const [selectedListId, setSelectedListId] = useState("");
   const lastDragKey = useRef(null);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+
+  const TRIAL_TOTAL_DAYS = 7;
+  const trialEndsAt = planStatus?.trialEndsAt
+    ? new Date(planStatus.trialEndsAt)
+    : null;
+  const daysRemaining = trialEndsAt
+    ? Math.max(0, differenceInCalendarDays(trialEndsAt, new Date()))
+    : 0;
 
   // Split days into weeks (rows of 7)
   const weeks = [];
@@ -291,15 +302,36 @@ export default function CalendarView({
           </button>
         </div>
         <div style={styles.toolbarRight}>
-          <div style={styles.trialBadge}>
-            <Clock size={12} style={{ flexShrink: 0 }} />
-            <span>14-Day Trial: 9 days remaining</span>
-          </div>
-          <button style={styles.upgradeBtn}>
-            <Sparkles size={14} style={{ flexShrink: 0 }} />
-            <span>Upgrade to Premium</span>
-            <span style={{ marginLeft: 2 }}>→</span>
-          </button>
+          {planStatus?.isPro ? (
+            <div style={styles.proBadge}>
+              <Sparkles size={12} style={{ flexShrink: 0 }} />
+              <span>Pro</span>
+            </div>
+          ) : planStatus?.isTrialActive ? (
+            <div style={styles.trialBadge}>
+              <Clock size={12} style={{ flexShrink: 0 }} />
+              <span>
+                {TRIAL_TOTAL_DAYS}-Day Trial: {daysRemaining} day
+                {daysRemaining === 1 ? "" : "s"} remaining
+              </span>
+            </div>
+          ) : planStatus ? (
+            <div style={styles.trialExpiredBadge}>
+              <Clock size={12} style={{ flexShrink: 0 }} />
+              <span>Trial expired</span>
+            </div>
+          ) : null}
+
+          {!planStatus?.isPro && (
+            <button
+              style={styles.upgradeBtn}
+              onClick={() => setShowPricingModal(true)}
+            >
+              <Sparkles size={14} style={{ flexShrink: 0 }} />
+              <span>Upgrade to Premium</span>
+              <span style={{ marginLeft: 2 }}>→</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -513,6 +545,10 @@ export default function CalendarView({
             </div>
           );
         })()}
+
+      {showPricingModal && (
+        <PricingModal onClose={() => setShowPricingModal(false)} />
+      )}
     </div>
   );
 }
@@ -552,6 +588,30 @@ const styles = {
     fontSize: 12,
     fontWeight: 600,
     whiteSpace: "nowrap",
+  },
+  proBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    background: "rgba(124,92,255,0.15)",
+    border: "1px solid rgba(124,92,255,0.5)",
+    color: "#a78bfa",
+    borderRadius: 8,
+    padding: "6px 12px",
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  trialExpiredBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    background: "rgba(235,90,70,0.12)",
+    border: "1px solid rgba(235,90,70,0.4)",
+    color: "#eb5a46",
+    borderRadius: 8,
+    padding: "6px 12px",
+    fontSize: 12,
+    fontWeight: 600,
   },
   upgradeBtn: {
     display: "flex",

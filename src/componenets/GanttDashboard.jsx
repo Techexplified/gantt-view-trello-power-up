@@ -6,7 +6,11 @@ import RightPanel from "./RightPanel";
 import CardModal from "./CardModal";
 import { useBoardData } from "../hooks/useBoardData";
 
-export default function GanttDashboard({ initialBoardId, onLogout }) {
+export default function GanttDashboard({
+  initialBoardId,
+  onLogout,
+  planStatus,
+}) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
   const [selectedCard, setSelectedCard] = useState(null);
   const [view, setView] = useState("calendar"); // "calendar" | "timeline"
@@ -50,12 +54,14 @@ export default function GanttDashboard({ initialBoardId, onLogout }) {
             lists={lists}
             onCardClick={setSelectedCard}
             boardId={activeBoardId}
+            planStatus={planStatus}
           />
         ) : (
           <CalendarView
             cards={cards}
             lists={lists}
             onCardClick={setSelectedCard}
+            planStatus={planStatus}
             onCardUpdated={(cardId, newDue, newStart) => {
               setCards((prev) =>
                 prev.map((c) =>
