@@ -1,20 +1,31 @@
 // src/componenets/PricingModal.jsx
 import React, { useState } from "react";
-import { X, Check, Sparkles } from "lucide-react";
+import {
+  X,
+  Calendar,
+  Move,
+  Plus,
+  ArrowLeftRight,
+  List,
+  Layers,
+  LineChart,
+  Target,
+  Flag,
+} from "lucide-react";
 
 const FREE_FEATURES = [
-  "Interactive Calendar View",
-  "Drag-and-Drop Scheduling",
-  "Quick Card Creation",
-  "Drag to Reschedule",
-  "Board Lists Panel",
-  "Multi-Board Support",
+  { label: "Interactive Calendar View", icon: Calendar },
+  { label: "Drag-and-Drop Scheduling", icon: Move },
+  { label: "Quick Card Creation", icon: Plus },
+  { label: "Drag to Reschedule", icon: ArrowLeftRight },
+  { label: "Board Lists Panel", icon: List },
+  { label: "Multi-Board Support", icon: Layers },
 ];
 
 const PRO_ONLY_FEATURES = [
-  "Timeline Preview",
-  "Deadline & Progress Tracking",
-  "Add Milestones",
+  { label: "Timeline Preview", icon: LineChart },
+  { label: "Deadline & Progress Tracking", icon: Target },
+  { label: "Add Milestones", icon: Flag },
 ];
 
 const PRO_PRICE = 5; // USD / month
@@ -23,9 +34,8 @@ export default function PricingModal({ onClose }) {
   const [activeTab, setActiveTab] = useState("free"); // "free" | "pro"
 
   const handleUpgradeClick = () => {
-    // No payment provider is wired into this project yet — this is a
-    // placeholder until that's built. Swap this out for a real checkout
-    // call once billing is added.
+    // No payment provider is wired into this project yet — placeholder
+    // until billing is built.
     alert("Upgrades aren't available yet — check back soon!");
   };
 
@@ -44,7 +54,7 @@ export default function PricingModal({ onClose }) {
             </div>
           </div>
           <button style={styles.closeBtn} onClick={onClose}>
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
 
@@ -73,7 +83,10 @@ export default function PricingModal({ onClose }) {
         {/* ── Plan card ── */}
         {activeTab === "free" ? (
           <div style={styles.card}>
-            <span style={styles.planPill}>Free plan</span>
+            <span style={styles.planPill}>
+              <span style={styles.planDot} />
+              Free plan
+            </span>
             <div style={styles.priceRow}>
               <span style={styles.priceSymbol}>$</span>
               <span style={styles.priceValue}>0</span>
@@ -84,12 +97,12 @@ export default function PricingModal({ onClose }) {
             </p>
             <div style={styles.divider} />
             <ul style={styles.featureList}>
-              {FREE_FEATURES.map((f) => (
-                <li key={f} style={styles.featureRow}>
+              {FREE_FEATURES.map(({ label, icon: Icon }) => (
+                <li key={label} style={styles.featureRow}>
                   <span style={styles.featureIcon}>
-                    <Check size={14} />
+                    <Icon size={15} />
                   </span>
-                  {f}
+                  {label}
                 </li>
               ))}
             </ul>
@@ -99,8 +112,8 @@ export default function PricingModal({ onClose }) {
           </div>
         ) : (
           <div style={styles.card}>
-            <span style={styles.planPillPro}>
-              <Sparkles size={12} style={{ marginRight: 4 }} />
+            <span style={styles.planPill}>
+              <span style={styles.planDot} />
               Pro plan
             </span>
             <div style={styles.priceRow}>
@@ -114,12 +127,12 @@ export default function PricingModal({ onClose }) {
             <div style={styles.divider} />
             <ul style={styles.featureList}>
               <li style={styles.everythingInFree}>Everything in Free +</li>
-              {PRO_ONLY_FEATURES.map((f) => (
-                <li key={f} style={styles.featureRow}>
-                  <span style={styles.featureIconPro}>
-                    <Check size={14} />
+              {PRO_ONLY_FEATURES.map(({ label, icon: Icon }) => (
+                <li key={label} style={styles.featureRow}>
+                  <span style={styles.featureIcon}>
+                    <Icon size={15} />
                   </span>
-                  {f}
+                  {label}
                 </li>
               ))}
             </ul>
@@ -135,49 +148,55 @@ export default function PricingModal({ onClose }) {
   );
 }
 
+const ACCENT = "#3b82f6";
+
 const styles = {
+  // Scroll lives HERE — on the overlay — never inside the card itself.
   overlay: {
     position: "fixed",
     inset: 0,
     background: "rgba(0,0,0,0.6)",
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
+    overflowY: "auto",
+    padding: "40px 16px",
     zIndex: 1000,
   },
   modal: {
-    width: 420,
+    width: 380,
     maxWidth: "92vw",
-    maxHeight: "88vh",
-    overflowY: "auto",
-    background: "#1a1f2e",
+    // No maxHeight / overflow here — the card grows to fit its content;
+    // the overlay scrolls the page around it if needed.
+    background: "#12172a",
     border: "1px solid rgba(255,255,255,0.08)",
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     fontFamily: "'Segoe UI', system-ui, sans-serif",
+    flexShrink: 0,
   },
   header: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  headerLeft: { display: "flex", alignItems: "center", gap: 12 },
+  headerLeft: { display: "flex", alignItems: "center", gap: 10 },
   logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    background: "linear-gradient(135deg, #7c5cff, #5b3df0)",
+    width: 38,
+    height: 38,
+    borderRadius: 9,
+    background: ACCENT,
     color: "#fff",
     fontWeight: 800,
-    fontSize: 20,
+    fontSize: 17,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  title: { color: "#e6edf3", fontSize: 18, fontWeight: 800 },
-  subtitle: { color: "#8b949e", fontSize: 12.5, marginTop: 2 },
+  title: { color: "#e6edf3", fontSize: 16.5, fontWeight: 800 },
+  subtitle: { color: "#8b949e", fontSize: 11.5, marginTop: 1 },
   closeBtn: {
     background: "transparent",
     border: "none",
@@ -186,107 +205,90 @@ const styles = {
     padding: 4,
     borderRadius: 6,
   },
-  tabs: {
-    display: "flex",
-    gap: 8,
-    marginBottom: 18,
-  },
+  tabs: { display: "flex", gap: 8, marginBottom: 14 },
   tab: {
     flex: 1,
-    padding: "10px 0",
-    borderRadius: 10,
+    padding: "8px 0",
+    borderRadius: 9,
     border: "1px solid rgba(255,255,255,0.1)",
     background: "transparent",
     color: "#8b949e",
     fontWeight: 700,
-    fontSize: 13.5,
+    fontSize: 12.5,
     cursor: "pointer",
   },
   tabActive: {
-    border: "1px solid #7c5cff",
+    border: `1px solid ${ACCENT}`,
     color: "#e6edf3",
-    background: "rgba(124,92,255,0.12)",
+    background: "rgba(59,130,246,0.12)",
   },
   card: {
     background: "rgba(255,255,255,0.03)",
     border: "1px solid rgba(255,255,255,0.07)",
-    borderRadius: 14,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
   },
   planPill: {
-    display: "inline-block",
-    background: "rgba(255,255,255,0.08)",
-    color: "#8b949e",
-    fontSize: 12,
-    fontWeight: 700,
-    borderRadius: 20,
-    padding: "4px 12px",
-    marginBottom: 14,
-  },
-  planPillPro: {
     display: "inline-flex",
     alignItems: "center",
-    background: "rgba(124,92,255,0.15)",
-    color: "#a78bfa",
-    fontSize: 12,
+    gap: 6,
+    background: "rgba(59,130,246,0.12)",
+    color: "#93c5fd",
+    fontSize: 11.5,
     fontWeight: 700,
     borderRadius: 20,
-    padding: "4px 12px",
-    marginBottom: 14,
+    padding: "4px 10px",
+    marginBottom: 12,
+  },
+  planDot: {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: ACCENT,
+    flexShrink: 0,
   },
   priceRow: {
     display: "flex",
     alignItems: "flex-end",
-    gap: 4,
-    marginBottom: 6,
+    gap: 3,
+    marginBottom: 4,
   },
-  priceSymbol: { color: "#e6edf3", fontSize: 22, fontWeight: 800 },
+  priceSymbol: { color: "#e6edf3", fontSize: 16, fontWeight: 800 },
   priceValue: {
     color: "#e6edf3",
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: 800,
     lineHeight: 1,
   },
   pricePeriod: {
     color: "#8b949e",
-    fontSize: 14,
-    marginLeft: 2,
-    marginBottom: 4,
+    fontSize: 12.5,
+    marginLeft: 1,
+    marginBottom: 3,
   },
-  tagline: { color: "#8b949e", fontSize: 13, margin: "0 0 16px" },
-  divider: { borderTop: "1px solid rgba(255,255,255,0.08)", marginBottom: 16 },
+  tagline: { color: "#8b949e", fontSize: 12, margin: "0 0 14px" },
+  divider: { borderTop: "1px solid rgba(255,255,255,0.08)", marginBottom: 14 },
   featureList: {
     listStyle: "none",
     padding: 0,
-    margin: "0 0 20px",
+    margin: "0 0 16px",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 10,
   },
   featureRow: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     color: "#e6edf3",
-    fontSize: 14,
+    fontSize: 13,
   },
   featureIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    background: "rgba(0,208,132,0.15)",
-    color: "#00d084",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  featureIconPro: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    background: "rgba(124,92,255,0.15)",
-    color: "#a78bfa",
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    background: "rgba(59,130,246,0.12)",
+    color: ACCENT,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -294,36 +296,36 @@ const styles = {
   },
   everythingInFree: {
     color: "#8b949e",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 700,
     marginBottom: -2,
   },
   currentPlanBtn: {
     width: "100%",
-    padding: "12px 0",
-    borderRadius: 10,
+    padding: "10px 0",
+    borderRadius: 9,
     border: "1px solid rgba(255,255,255,0.15)",
     background: "transparent",
     color: "#8b949e",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 13,
     cursor: "not-allowed",
   },
   upgradeCtaBtn: {
     width: "100%",
-    padding: "12px 0",
-    borderRadius: 10,
+    padding: "10px 0",
+    borderRadius: 9,
     border: "none",
-    background: "linear-gradient(135deg, #7c5cff, #5b3df0)",
+    background: ACCENT,
     color: "#fff",
     fontWeight: 700,
-    fontSize: 14,
+    fontSize: 13,
     cursor: "pointer",
   },
   footer: {
     textAlign: "center",
     color: "#6e7681",
-    fontSize: 12,
-    marginTop: 16,
+    fontSize: 11.5,
+    marginTop: 14,
   },
 };
