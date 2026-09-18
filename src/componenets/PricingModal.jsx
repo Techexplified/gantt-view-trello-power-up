@@ -12,6 +12,7 @@ import {
   Target,
   Flag,
 } from "lucide-react";
+import { getStoredToken } from "../utils/auth";
 
 const FREE_FEATURES = [
   { label: "Interactive Calendar View", icon: Calendar },
@@ -33,10 +34,24 @@ const PRO_PRICE = 5; // USD / month
 export default function PricingModal({ onClose }) {
   const [activeTab, setActiveTab] = useState("free"); // "free" | "pro"
 
-  const handleUpgradeClick = () => {
-    // No payment provider is wired into this project yet — placeholder
-    // until billing is built.
-    alert("Upgrades aren't available yet — check back soon!");
+  // replace the handleUpgradeClick stub with:
+  const handleUpgradeClick = async () => {
+    try {
+      const token = getStoredToken();
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/checkout/init`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) throw new Error(`Checkout init failed: ${res.status}`);
+      const { checkoutUrl } = await res.json();
+      window.open(checkoutUrl, "_blank"); // opens Dodo's hosted checkout page
+    } catch (err) {
+      console.error("Failed to start checkout:", err);
+      alert("Couldn't start checkout — please try again.");
+    }
   };
 
   return (
