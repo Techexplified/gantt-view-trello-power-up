@@ -17,3 +17,22 @@ export async function getMe() {
   }
   return res.json(); // { atlassianId, email, displayName, plan, isPro, isTrialActive, isActive, trialEndsAt }
 }
+
+export async function getPortalUrl() {
+  const token = getStoredToken();
+  if (!token) throw new Error("No Trello token available.");
+
+  const res = await fetch(`${API_BASE_URL}/api/subscription/portal`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (res.status === 404) {
+    throw new Error("no_billing_account");
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to get billing portal: ${res.status}`);
+  }
+  const { portalUrl } = await res.json();
+  return portalUrl;
+}

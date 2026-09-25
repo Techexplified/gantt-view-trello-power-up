@@ -17,6 +17,7 @@ import {
 import { createCardWithDates, updateCard } from "../utils/trelloApi";
 import PricingModal from "./PricingModal";
 import { X, Clock, Sparkles } from "lucide-react";
+import { getPortalUrl } from "../utils/api";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -56,6 +57,13 @@ function listColor(listId, lists) {
   return CARD_COLORS[idx % CARD_COLORS.length] || "#8b949e";
 }
 
+function formatShortDate(dateInput) {
+  if (!dateInput) return "";
+  return new Date(dateInput).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
 /**
  * Split a card's date range into per-week segments so it can span
  * across grid rows without breaking.
@@ -141,6 +149,20 @@ export default function CalendarView({
   const [selectedListId, setSelectedListId] = useState("");
   const lastDragKey = useRef(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    try {
+      const url = await getPortalUrl();
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error("Failed to open billing portal:", err);
+      alert("Couldn't open billing portal — please try again.");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   const TRIAL_TOTAL_DAYS = 7;
   const trialEndsAt = planStatus?.trialEndsAt
@@ -303,10 +325,23 @@ export default function CalendarView({
         </div>
         <div style={styles.toolbarRight}>
           {planStatus?.isPro ? (
-            <div style={styles.proBadge}>
-              <Sparkles size={12} style={{ flexShrink: 0 }} />
-              <span>Pro</span>
-            </div>
+            <>
+              <div style={styles.proBadge}>
+                <Sparkles size={12} style={{ flexShrink: 0 }} />
+                <span>
+                  {planStatus.cancelAtPeriodEnd
+                    ? `Cancels ${formatShortDate(planStatus.expiresAt)}`
+                    : `Pro · Renews ${formatShortDate(planStatus.expiresAt)}`}
+                </span>
+              </div>
+              <button
+                style={styles.manageBillingBtn}
+                onClick={handleManageBilling}
+                disabled={portalLoading}
+              >
+                {portalLoading ? "Loading…" : "Manage Billing"}
+              </button>
+            </>
           ) : planStatus?.isTrialActive ? (
             <div style={styles.trialBadge}>
               <Clock size={12} style={{ flexShrink: 0 }} />
@@ -600,6 +635,19 @@ const styles = {
     padding: "6px 12px",
     fontSize: 12,
     fontWeight: 700,
+  },
+  manageBillingBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    background: "transparent",
+    border: "1px solid rgba(124,92,255,0.4)",
+    color: "#a78bfa",
+    borderRadius: 8,
+    padding: "6px 12px",
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
   },
   trialExpiredBadge: {
     display: "flex",
