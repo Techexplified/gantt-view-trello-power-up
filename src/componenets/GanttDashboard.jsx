@@ -5,13 +5,20 @@ import TimelineView from "./TimelineView";
 import RightPanel from "./RightPanel";
 import CardModal from "./CardModal";
 import { useBoardData } from "../hooks/useBoardData";
+import { usePlan } from "../plan/planContext";
+import { Lock, Sparkles } from "lucide-react";
 
-export default function GanttDashboard({
-  initialBoardId,
-  onLogout,
-  planStatus,
-}) {
+export default function GanttDashboard({ initialBoardId, onLogout }) {
   const [activeBoardId, setActiveBoardId] = useState(initialBoardId || null);
+  const plan = usePlan();
+
+  // The Trello board id arrives asynchronously (after first render). Adopt it
+  // once it shows up, unless the user already picked a board themselves.
+  useEffect(() => {
+    if (initialBoardId) {
+      setActiveBoardId((current) => current || initialBoardId);
+    }
+  }, [initialBoardId]);
   const [selectedCard, setSelectedCard] = useState(null);
   const [view, setView] = useState("calendar"); // "calendar" | "timeline"
   const {
@@ -38,6 +45,7 @@ export default function GanttDashboard({
         onLogout={onLogout}
         view={view}
         onViewChange={setView}
+        proLocked={!!plan.status && !plan.canUsePro}
       />
 
       {/* ── Main Calendar ── */}
@@ -49,19 +57,21 @@ export default function GanttDashboard({
         ) : error ? (
           <ErrorState message={error} />
         ) : view === "timeline" ? (
-          <TimelineView
-            cards={cards}
-            lists={lists}
-            onCardClick={setSelectedCard}
-            boardId={activeBoardId}
-            planStatus={planStatus}
-          />
+          plan.canUsePro ? (
+            <TimelineView
+              cards={cards}
+              lists={lists}
+              onCardClick={setSelectedCard}
+              boardId={activeBoardId}
+            />
+          ) : (
+            <ProGate plan={plan} />
+          )
         ) : (
           <CalendarView
             cards={cards}
             lists={lists}
             onCardClick={setSelectedCard}
-            planStatus={planStatus}
             onCardUpdated={(cardId, newDue, newStart) => {
               setCards((prev) =>
                 prev.map((c) =>
@@ -119,6 +129,56 @@ function EmptyState() {
       <p style={styles.emptyText}>
         Choose a board from the left sidebar to see its calendar view.
       </p>
+    </div>
+  );
+}
+
+// Shown instead of Timeline (a Pro feature) when there's no active Pro plan
+// or trial. Note: this is a UI gate — Timeline data comes straight from
+// Trello, so the backend can't enforce it.
+function ProGate({ plan }) {
+  if (plan.loading) {
+    return (
+      <div style={styles.centered}>
+        <div style={styles.spinner} />
+        <p style={styles.loadingText}>Checking your plan…</p>
+      </div>
+    );
+  }
+  if (!plan.status && plan.error) {
+    return (
+      <div style={styles.centered}>
+        <div style={styles.errorIcon}>⚠️</div>
+        <h2 style={styles.emptyTitle}>Couldn't check your plan</h2>
+        <p style={styles.emptyText}>
+          TaskFlow's servers didn't respond. We'll keep retrying.
+        </p>
+        <button style={styles.gateBtn} onClick={plan.refresh}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+  const hadTrial = !!plan.status?.trialEndsAt;
+  return (
+    <div style={styles.centered}>
+      <div style={styles.lockCircle}>
+        <Lock size={26} color="#93c5fd" />
+      </div>
+      <h2 style={styles.emptyTitle}>Timeline is a Pro feature</h2>
+      <p style={{ ...styles.emptyText, maxWidth: 380 }}>
+        {hadTrial ? "Your 7-day trial has ended. " : ""}
+        Upgrade to Pro to unlock the Timeline view, deadline & progress
+        tracking, and milestones.
+      </p>
+      <button
+        style={styles.gateBtn}
+        onClick={plan.openPricing}
+        disabled={plan.waitingForPayment}
+      >
+        <Sparkles size={14} />
+        {plan.waitingForPayment ? "Confirming payment…" : "Upgrade to Pro"}
+      </button>
     </div>
   );
 }
@@ -187,6 +247,29 @@ const styles = {
     width: "100%",
   },
   emptyIcon: { fontSize: 48 },
+  lockCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: "50%",
+    background: "rgba(59,130,246,0.12)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gateBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+    background: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: 9,
+    padding: "10px 18px",
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
   errorIcon: { fontSize: 48 },
   emptyTitle: { color: "#e6edf3", fontSize: 20, fontWeight: 700, margin: 0 },
   emptyText: { color: "#8b949e", fontSize: 14, margin: 0, textAlign: "center" },

@@ -1,41 +1,45 @@
+// public/auth.js — runs in the Trello authorize popup after the redirect.
 (function () {
+  var status = document.getElementById("status");
   try {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    var params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    var token = params.get("token");
 
-    const token = params.get("token");
+    // Remove the token from the address bar / history right away.
+    try {
+      history.replaceState(null, "", window.location.pathname);
+    } catch (e) {
+      /* ignore */
+    }
 
     if (!token) {
-      document.getElementById("status").textContent =
-        "Authorization failed: No token received.";
+      status.textContent =
+        "Authorization failed or was cancelled. You can close this window.";
       return;
     }
 
-    // Save token as backup
-    localStorage.setItem("taskflow_trello_token", token);
+    // Fallback path for browsers where popup and app share storage.
+    try {
+      localStorage.setItem("taskflow_trello_token", token);
+    } catch (e) {
+      /* storage unavailable */
+    }
 
-    // Send token to parent window
+    // Send ONLY to our own origin — never "*" — so a third-party page that
+    // opened this popup can't receive the user's Trello token.
     if (window.opener) {
       window.opener.postMessage(
-        {
-          token,
-          source: "taskflow-auth",
-        },
-        "*",
+        { token: token, source: "taskflow-auth" },
+        window.location.origin,
       );
     }
 
-    document.getElementById("status").textContent =
-      "Authorization successful. Closing window...";
-
-    setTimeout(() => {
+    status.textContent = "Authorization successful. Closing window...";
+    setTimeout(function () {
       window.close();
-    }, 1000);
+    }, 800);
   } catch (err) {
-    // console.error("Auth error:", err);
-    alert("Auth error:", err);
-
-    const status = document.getElementById("status");
-
+    console.error("Auth error:", err);
     if (status) {
       status.textContent =
         "Authorization failed. Please close this window and try again.";

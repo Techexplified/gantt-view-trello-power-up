@@ -12,7 +12,7 @@ import {
   Target,
   Flag,
 } from "lucide-react";
-import { getStoredToken } from "../utils/auth";
+import { usePlan, trialDaysLeft } from "../plan/planContext";
 
 const FREE_FEATURES = [
   { label: "Interactive Calendar View", icon: Calendar },
@@ -31,28 +31,63 @@ const PRO_ONLY_FEATURES = [
 
 const PRO_PRICE = 5; // USD / month
 
-export default function PricingModal({ onClose }) {
-  const [activeTab, setActiveTab] = useState("free"); // "free" | "pro"
+export default function PricingModal() {
+  const {
+    status,
+    closePricing: onClose,
+    startCheckout,
+    busy,
+    waitingForPayment,
+    cancelWaiting,
+  } = usePlan();
+  // Opened from an "Upgrade" button, so show the Pro plan first.
+  const [activeTab, setActiveTab] = useState("pro"); // "free" | "pro"
 
-  // replace the handleUpgradeClick stub with:
-  const handleUpgradeClick = async () => {
-    try {
-      const token = getStoredToken();
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/checkout/init`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      if (!res.ok) throw new Error(`Checkout init failed: ${res.status}`);
-      const { checkoutUrl } = await res.json();
-      window.open(checkoutUrl, "_blank"); // opens Dodo's hosted checkout page
-    } catch (err) {
-      console.error("Failed to start checkout:", err);
-      alert("Couldn't start checkout — please try again.");
-    }
-  };
+  const isPro = !!status?.isPro;
+  const trialLeft = trialDaysLeft(status);
+
+  const freeButtonLabel = isPro
+    ? "Included in Pro"
+    : status?.isTrialActive
+      ? `Pro trial active · ${trialLeft} day${trialLeft === 1 ? "" : "s"} left`
+      : "Current plan";
+
+  let proButton;
+  if (isPro) {
+    proButton = (
+      <button style={styles.currentPlanBtn} disabled>
+        You're on Pro
+      </button>
+    );
+  } else if (busy === "checkout") {
+    proButton = (
+      <button style={{ ...styles.upgradeCtaBtn, opacity: 0.7 }} disabled>
+        Opening checkout…
+      </button>
+    );
+  } else if (waitingForPayment) {
+    proButton = (
+      <>
+        <button style={{ ...styles.upgradeCtaBtn, opacity: 0.7 }} disabled>
+          Waiting for payment confirmation…
+        </button>
+        <p style={styles.waitingHint}>
+          Finish paying in the checkout tab — Pro unlocks here automatically.{" "}
+          <button style={styles.linkBtn} onClick={cancelWaiting}>
+            Start over
+          </button>
+        </p>
+      </>
+    );
+  } else {
+    proButton = (
+      // startCheckout must run directly in the click handler so the
+      // browser allows the checkout tab to open.
+      <button style={styles.upgradeCtaBtn} onClick={startCheckout}>
+        Upgrade to Pro
+      </button>
+    );
+  }
 
   return (
     <div style={styles.overlay} onClick={onClose}>
@@ -122,7 +157,7 @@ export default function PricingModal({ onClose }) {
               ))}
             </ul>
             <button style={styles.currentPlanBtn} disabled>
-              Current plan
+              {freeButtonLabel}
             </button>
           </div>
         ) : (
@@ -151,13 +186,11 @@ export default function PricingModal({ onClose }) {
                 </li>
               ))}
             </ul>
-            <button style={styles.upgradeCtaBtn} onClick={handleUpgradeClick}>
-              Upgrade to Pro
-            </button>
+            {proButton}
           </div>
         )}
 
-        <div style={styles.footer}>🔒 Secure checkout via Paddle</div>
+        <div style={styles.footer}>🔒 Secure checkout via Dodo Payments</div>
       </div>
     </div>
   );
@@ -342,5 +375,21 @@ const styles = {
     color: "#6e7681",
     fontSize: 11.5,
     marginTop: 14,
+  },
+  waitingHint: {
+    color: "#8b949e",
+    fontSize: 11.5,
+    lineHeight: 1.5,
+    margin: "10px 0 0",
+    textAlign: "center",
+  },
+  linkBtn: {
+    background: "none",
+    border: "none",
+    padding: 0,
+    color: "#93c5fd",
+    fontSize: 11.5,
+    cursor: "pointer",
+    textDecoration: "underline",
   },
 };

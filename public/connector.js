@@ -23,7 +23,7 @@ var BASE_URL = window.location.origin;
 
 window.TrelloPowerUp.initialize(
   {
-    "board-buttons": function (t) {
+    "board-buttons": function () {
       return [
         {
           icon: {

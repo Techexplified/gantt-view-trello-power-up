@@ -15,9 +15,8 @@ import {
   differenceInCalendarDays,
 } from "date-fns";
 import { createCardWithDates, updateCard } from "../utils/trelloApi";
-import PricingModal from "./PricingModal";
 import { X, Clock, Sparkles } from "lucide-react";
-import { getPortalUrl } from "../utils/api";
+import { usePlan, trialDaysLeft } from "../plan/planContext";
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -136,8 +135,14 @@ export default function CalendarView({
   onCardClick,
   onCardUpdated,
   onCardCreated,
-  planStatus,
 }) {
+  const {
+    status: planStatus,
+    openPricing,
+    openBillingPortal,
+    busy,
+    waitingForPayment,
+  } = usePlan();
   const [currentDate, setCurrentDate] = useState(new Date());
   const days = getCalendarDays(currentDate);
   const [dragging, setDragging] = useState(null);
@@ -148,29 +153,9 @@ export default function CalendarView({
   const [newCardTitle, setNewCardTitle] = useState("");
   const [selectedListId, setSelectedListId] = useState("");
   const lastDragKey = useRef(null);
-  const [showPricingModal, setShowPricingModal] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
-
-  const handleManageBilling = async () => {
-    setPortalLoading(true);
-    try {
-      const url = await getPortalUrl();
-      window.open(url, "_blank");
-    } catch (err) {
-      console.error("Failed to open billing portal:", err);
-      alert("Couldn't open billing portal — please try again.");
-    } finally {
-      setPortalLoading(false);
-    }
-  };
-
   const TRIAL_TOTAL_DAYS = 7;
-  const trialEndsAt = planStatus?.trialEndsAt
-    ? new Date(planStatus.trialEndsAt)
-    : null;
-  const daysRemaining = trialEndsAt
-    ? Math.max(0, differenceInCalendarDays(trialEndsAt, new Date()))
-    : 0;
+  // Rounded UP, so the last partial day reads "1 day remaining", not "0".
+  const daysRemaining = trialDaysLeft(planStatus);
 
   // Split days into weeks (rows of 7)
   const weeks = [];
@@ -329,17 +314,19 @@ export default function CalendarView({
               <div style={styles.proBadge}>
                 <Sparkles size={12} style={{ flexShrink: 0 }} />
                 <span>
-                  {planStatus.cancelAtPeriodEnd
-                    ? `Cancels ${formatShortDate(planStatus.expiresAt)}`
-                    : `Pro · Renews ${formatShortDate(planStatus.expiresAt)}`}
+                  {!planStatus.expiresAt
+                    ? "Pro"
+                    : planStatus.cancelAtPeriodEnd
+                      ? `Pro · Ends ${formatShortDate(planStatus.expiresAt)}`
+                      : `Pro · Renews ${formatShortDate(planStatus.expiresAt)}`}
                 </span>
               </div>
               <button
                 style={styles.manageBillingBtn}
-                onClick={handleManageBilling}
-                disabled={portalLoading}
+                onClick={openBillingPortal}
+                disabled={busy === "portal"}
               >
-                {portalLoading ? "Loading…" : "Manage Billing"}
+                {busy === "portal" ? "Opening…" : "Manage Billing"}
               </button>
             </>
           ) : planStatus?.isTrialActive ? (
@@ -357,14 +344,15 @@ export default function CalendarView({
             </div>
           ) : null}
 
-          {!planStatus?.isPro && (
-            <button
-              style={styles.upgradeBtn}
-              onClick={() => setShowPricingModal(true)}
-            >
+          {/* Hidden until the plan is known, so Pro users never see a
+              flash of "Upgrade" while /me is loading. */}
+          {planStatus && !planStatus.isPro && (
+            <button style={styles.upgradeBtn} onClick={openPricing}>
               <Sparkles size={14} style={{ flexShrink: 0 }} />
-              <span>Upgrade to Premium</span>
-              <span style={{ marginLeft: 2 }}>→</span>
+              <span>
+                {waitingForPayment ? "Confirming payment…" : "Upgrade to Premium"}
+              </span>
+              {!waitingForPayment && <span style={{ marginLeft: 2 }}>→</span>}
             </button>
           )}
         </div>
@@ -580,10 +568,6 @@ export default function CalendarView({
             </div>
           );
         })()}
-
-      {showPricingModal && (
-        <PricingModal onClose={() => setShowPricingModal(false)} />
-      )}
     </div>
   );
 }

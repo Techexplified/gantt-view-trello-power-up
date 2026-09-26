@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { getMyBoards } from "../utils/trelloApi";
-import { clearToken } from "../utils/auth";
-import { ChartNoAxesGantt } from "lucide-react";
+import { ChartNoAxesGantt, Lock } from "lucide-react";
 
 export default function Sidebar({
-  board,
   activeBoardId,
   onSelectBoard,
   onLogout,
   view = "calendar",
   onViewChange,
+  proLocked = false,
 }) {
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,10 +22,8 @@ export default function Sidebar({
       .finally(() => setLoading(false));
   }, []);
 
-  const handleLogout = () => {
-    clearToken();
-    onLogout();
-  };
+  // App clears (and revokes) the token.
+  const handleLogout = () => onLogout();
 
   return (
     <>
@@ -67,8 +64,12 @@ export default function Sidebar({
                   ...(view === "timeline" ? styles.viewToggleBtnActive : {}),
                 }}
                 onClick={() => onViewChange && onViewChange("timeline")}
+                title={proLocked ? "Pro feature" : undefined}
               >
-                Timeline
+                <span style={styles.viewToggleInner}>
+                  Timeline
+                  {proLocked && <Lock size={11} />}
+                </span>
               </button>
             </div>
 
@@ -229,6 +230,11 @@ const styles = {
     borderRadius: 6,
     cursor: "pointer",
     transition: "background 0.15s, color 0.15s",
+  },
+  viewToggleInner: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
   },
   viewToggleBtnActive: {
     background: "rgba(0,208,132,0.15)",

@@ -8,10 +8,6 @@
           "value": "nosniff"
         },
         {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
         },
@@ -21,7 +17,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://p.trellocdn.com https://trello.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.trello.com https://trello.com https://taskflowapi-pf6diz22ka-uc.a.run.app https://ibuprofen-dress-saturate.ngrok-free.dev; frame-ancestors https://trello.com https://*.trello.com;"
+          "value": "default-src 'self'; script-src 'self' https://p.trellocdn.com https://trello.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.trello.com https://trello.com https://taskflowapi-pf6diz22ka-uc.a.run.app; frame-ancestors https://trello.com https://*.trello.com; base-uri 'self'; form-action 'self'; object-src 'none';"
         }
       ]
     }

@@ -1,106 +1,75 @@
 import React, { useState, useEffect, useCallback } from "react";
 import LoginScreen from "./componenets/LoginScreen";
 import GanttDashboard from "./componenets/GanttDashboard";
-import { getStoredToken, clearToken } from "./utils/auth";
-import { getMe } from "./utils/api";
+import PlanProvider from "./plan/PlanProvider";
+import { getStoredToken, clearToken, revokeToken } from "./utils/auth";
+import { AUTH_EXPIRED_EVENT } from "./utils/api";
+
+// If the backend's CHECKOUT_RETURN_URL still points at the app root, Dodo
+// lands here with ?status=… — hand off to the lightweight return page.
+function isCheckoutReturn() {
+  const p = new URLSearchParams(window.location.search);
+  return p.has("status") && (p.has("subscription_id") || p.has("payment_id"));
+}
 
 export default function App() {
   const [token, setToken] = useState(() => getStoredToken());
   const [boardId, setBoardId] = useState(null);
-  const [planStatus, setPlanStatus] = useState(null);
+  const redirecting = isCheckoutReturn();
 
   useEffect(() => {
+    if (redirecting) {
+      window.location.replace("/checkout-return.html" + window.location.search);
+    }
+  }, [redirecting]);
+
+  // Current Trello board when opened from the Power-Up button.
+  useEffect(() => {
+    if (!window.TrelloPowerUp) return; // plain browser tab / local dev
     try {
-      if (window.TrelloPowerUp) {
-        const t = window.TrelloPowerUp.iframe();
-        t.board("id").then((board) => {
-          if (board && board.id) setBoardId(board.id);
+      const t = window.TrelloPowerUp.iframe();
+      Promise.resolve(t.board("id"))
+        .then((board) => {
+          if (board?.id) setBoardId(board.id);
+        })
+        .catch(() => {
+          /* not inside a Trello iframe */
         });
-      }
-    } catch (e) {
-      // Not inside a Trello iframe (e.g. dev mode)
+    } catch {
+      /* not inside a Trello iframe */
     }
   }, []);
 
-  const refreshPlanStatus = useCallback(() => {
-    if (!getStoredToken()) return;
-    getMe()
-      .then(setPlanStatus)
-      .catch((err) => {
-        console.error("Failed to sync with backend:", err);
-      });
-  }, []);
-
+  // Backend said the Trello token is invalid/revoked → back to sign-in.
+  // (Only a real 401 does this — outages no longer log everyone out.)
   useEffect(() => {
-    if (!token) return;
-    getMe()
-      .then(setPlanStatus)
-      .catch((err) => {
-        console.error("Failed to sync with backend:", err);
-        clearToken();
-        setToken(null);
-      });
-  }, [token]);
-
-  // ── Checkout return handling ─────────────────────────────────────────
-  // If THIS load is the checkout-return tab (opened via window.open from
-  // PricingModal), Dodo will have appended ?status=active&... to the URL.
-  // Tell the tab that opened us, then close ourselves so the user lands
-  // back in Trello automatically instead of staring at an orphan tab.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("status") === "active" && window.opener) {
-      try {
-        window.opener.postMessage(
-          { type: "taskflow:subscription-active" },
-          "*",
-        );
-      } catch (e) {
-        console.error("Failed to notify opener tab:", e);
-      }
-      window.close();
-    }
-  }, []);
-
-  // ── Cross-tab sync ───────────────────────────────────────────────────
-  // Runs in the ORIGINAL tab (the real Power-Up iframe). Picks up the
-  // message posted above and refetches plan status so the Pro badge
-  // appears without a manual reload.
-  useEffect(() => {
-    const handler = (event) => {
-      if (event.data?.type === "taskflow:subscription-active") {
-        refreshPlanStatus();
-      }
+    const onExpired = () => {
+      clearToken();
+      setToken(null);
     };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [refreshPlanStatus]);
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, []);
 
-  // ── Safety net ───────────────────────────────────────────────────────
-  // Covers cases where postMessage/window.close don't fire (popup
-  // blockers, the user closing the checkout tab manually, etc.) by
-  // refetching whenever the user tabs back into this window.
-  useEffect(() => {
-    window.addEventListener("focus", refreshPlanStatus);
-    return () => window.removeEventListener("focus", refreshPlanStatus);
-  }, [refreshPlanStatus]);
+  const handleAuth = useCallback((newToken) => setToken(newToken), []);
 
-  const handleAuth = (newToken) => setToken(newToken);
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
+    const old = getStoredToken();
     clearToken();
     setToken(null);
-    setPlanStatus(null);
-  };
+    revokeToken(old); // best-effort, doesn't block
+  }, []);
+
+  if (redirecting) return null;
 
   if (!token) {
     return <LoginScreen onAuth={handleAuth} />;
   }
 
+  // key={token}: a new sign-in starts with a fresh plan state.
   return (
-    <GanttDashboard
-      initialBoardId={boardId}
-      onLogout={handleLogout}
-      planStatus={planStatus}
-    />
+    <PlanProvider key={token}>
+      <GanttDashboard initialBoardId={boardId} onLogout={handleLogout} />
+    </PlanProvider>
   );
 }

@@ -45,14 +45,6 @@ const LABEL_COLORS = {
   black: "#344563",
 };
 
-function fmtDate(iso) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 function fmtDateTime(iso) {
   if (!iso) return null;
   return new Date(iso).toLocaleString("en-US", {

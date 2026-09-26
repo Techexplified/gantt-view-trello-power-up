@@ -1,37 +1,72 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
-// Replace TRELLO_API_KEY with your actual key from
-// https://trello.com/power-ups/admin
+// Trello API keys are public by design (the secret is never used here).
 // ─────────────────────────────────────────────────────────────────────────────
-export const TRELLO_API_KEY = "e45a7c2350efb8ff28812397ba677b0c"; // <-- replace this
+export const TRELLO_API_KEY = "e45a7c2350efb8ff28812397ba677b0c";
 
-// The auth callback URL must match what you registered in the Power-Up admin.
-// During local dev this is typically http://localhost:3000/auth.html
+// The auth callback URL must be listed as an allowed origin in the Power-Up
+// admin (https://trello.com/power-ups/admin).
 export const AUTH_CALLBACK_URL = `${window.location.origin}/auth.html`;
 
+// `account` scope lets the backend read the member's email (used for the
+// customer record and to pre-fill the checkout). Without it, email is blank.
 export const TRELLO_AUTH_URL = (returnUrl) =>
   `https://trello.com/1/authorize?` +
   `expiration=never` +
   `&name=TaskFlow` +
-  `&scope=read,write` +
+  `&scope=read,write,account` +
   `&response_type=token` +
   `&key=${TRELLO_API_KEY}` +
   `&return_url=${encodeURIComponent(returnUrl || AUTH_CALLBACK_URL)}` +
   `&callback_method=fragment`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Token helpers (stored in localStorage so they survive page reloads)
+// Token helpers (localStorage so they survive reloads). Wrapped in try/catch:
+// storage can throw in some embedded/private contexts.
 // ─────────────────────────────────────────────────────────────────────────────
 const TOKEN_KEY = "taskflow_trello_token";
 
-export const getStoredToken = () => localStorage.getItem(TOKEN_KEY);
-export const storeToken = (token) => localStorage.setItem(TOKEN_KEY, token);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+export const getStoredToken = () => {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+export const storeToken = (token) => {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* storage unavailable — token lives for this page load only */
+  }
+};
+export const clearToken = () => {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+};
+
+// Best-effort: revoke the token at Trello on sign-out so a copied token
+// stops working. Never blocks sign-out if it fails.
+export async function revokeToken(token) {
+  if (!token) return;
+  try {
+    await fetch(
+      `https://api.trello.com/1/tokens/${encodeURIComponent(token)}/?key=${TRELLO_API_KEY}&token=${encodeURIComponent(token)}`,
+      { method: "DELETE" },
+    );
+  } catch {
+    /* offline or blocked — local sign-out still happens */
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // OAuth popup flow
-// Opens the Trello auth page in a small popup and listens for the token
-// via postMessage from auth.html.
+// Opens Trello's authorize page in a popup; public/auth.js posts the token
+// back to this window. Messages are accepted ONLY from our own origin, so
+// another site can't inject a token into the app.
 // ─────────────────────────────────────────────────────────────────────────────
 export function authorizeWithTrello() {
   return new Promise((resolve, reject) => {
@@ -51,62 +86,42 @@ export function authorizeWithTrello() {
       return;
     }
 
-    // Listen for the token posted back by auth.html
-    const handler = (event) => {
-      // Accept messages from Trello or our own origin
-      if (!event.data) return;
-
+    let done = false;
+    const finish = (err, token) => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("message", onMessage);
+      clearInterval(closedPoll);
+      if (err) return reject(err);
+      storeToken(token);
       try {
-        const data =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
-        if (data && data.token) {
-          window.removeEventListener("message", handler);
-          clearInterval(pollTimer);
-          clearInterval(tokenPoll);
-          storeToken(data.token);
-          resolve(data.token);
-        }
-      } catch (_) {
-        /* ignore non-JSON messages */
+        popup.close();
+      } catch {
+        /* already closed */
       }
+      resolve(token);
     };
 
-    window.addEventListener("message", handler);
-
-    const tokenPoll = setInterval(() => {
-      const token = getStoredToken();
-
-      if (token) {
-        clearInterval(tokenPoll);
-        clearInterval(pollTimer);
-        clearInterval(tokenPoll);
-        window.removeEventListener("message", handler);
-
-        try {
-          popup.close();
-        } catch (_) {}
-
-        resolve(token);
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (data?.source === "taskflow-auth" && typeof data.token === "string") {
+        finish(null, data.token);
       }
-    }, 300);
+    };
+    window.addEventListener("message", onMessage);
 
-    // Fallback: poll localStorage in case postMessage doesn't fire
-    // (e.g. the popup wrote directly to localStorage in auth.html)
-    const pollTimer = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(pollTimer);
-        clearInterval(tokenPoll);
-        window.removeEventListener("message", handler);
-
+    // If the user closes the popup without authorizing. A short grace period
+    // lets a just-sent postMessage arrive first.
+    const closedPoll = setInterval(() => {
+      if (!popup.closed) return;
+      clearInterval(closedPoll);
+      setTimeout(() => {
+        // Fallback for browsers where the popup shares our storage.
         const stored = getStoredToken();
-
-        if (stored) {
-          resolve(stored);
-        } else {
-          reject(new Error("Authorization cancelled."));
-        }
-      }
+        if (stored) finish(null, stored);
+        else finish(new Error("Authorization cancelled."));
+      }, 600);
     }, 500);
   });
 }
